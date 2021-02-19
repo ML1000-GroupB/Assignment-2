@@ -31,8 +31,31 @@ To look at the dimensions of the data:
 ```{r}
 dim(data)
 ```
+The dimensions of the dataset are 9994 by 21. 
 
 Check that the Order Date and Ship Date column type is POSIXct which is a date data type:
 ```{r}
 data
 ```
+
+To check the data type for each column: 
+```{r, echo=FALSE}
+str(data)
+```
+There are 6 numeric variables, 2 date variables, and 13 character variables.
+
+
+See if there are duplicates in the data and extract them:
+```{r}
+data %>% distinct()
+```
+
+Another way to extract only the unique columns of the dataset: 
+```{r}
+data_unique <- unique(data)
+```
+
+```{r}
+dim(data_unique)
+```
+The dimensions of the dataset with only the unique rows are still 9994 by 21, so it appears there are no duplicated rows in the original dataset.
