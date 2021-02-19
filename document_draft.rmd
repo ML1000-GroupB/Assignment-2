@@ -44,6 +44,9 @@ str(data)
 ```
 There are 6 numeric variables, 2 date variables, and 13 character variables.
 
+```{r}
+glimpse(data)
+```
 
 See if there are duplicates in the data and extract them:
 ```{r}
@@ -59,3 +62,39 @@ data_unique <- unique(data)
 dim(data_unique)
 ```
 The dimensions of the dataset with only the unique rows are still 9994 by 21, so it appears there are no duplicated rows in the original dataset.
+
+
+## Check for missing values in data:
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+##to look for missing values which are coded as NA in each column:
+n=c()
+for (i in 1:ncol(data)) {
+  n[i]=sum(is.na(data[,i]), fixed = TRUE)
+}
+missing_values=paste0(colnames(data),rep("-",15),n,rep(" missing values",))
+#cat("The number of missing values for each variable are:")
+missing_values
+```
+This is 1 missing value in this dataset.
+
+```{r , echo=FALSE, message=FALSE, warning=FALSE}
+#check missing values of each column
+m=c()
+for (i in 1:ncol(data))  {
+  m[i]=sum(grepl("?",data[,i],fixed = TRUE))
+}
+missval=paste0(colnames(data),rep("-",15),m,rep(" missing values",))
+#cat("The number of missing values for each variable are:")
+missval
+```
+
+
+
+## list rows of data that have missing values
+```{r}
+data[!complete.cases(data),]
+```
+Percentage of missing values
+```{r, echo=FALSE,message=FALSE,warning=FALSE}
+mean(is.na(data))
+```
