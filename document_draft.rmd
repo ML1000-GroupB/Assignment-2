@@ -98,3 +98,32 @@ Percentage of missing values
 ```{r, echo=FALSE,message=FALSE,warning=FALSE}
 mean(is.na(data))
 ```
+Remove the spaces in the column names and replace with "_" to make variable names easier to handle:
+```{r, echo=FALSE, warning=FALSE}
+
+names(data) <- gsub(" ", "_", names(data))
+
+#check column names have been changed:
+colnames(data)
+```
+
+# Exploratory Data Analysis
+
+Find the difference between Order Date and Ship Date, and store into a new column called diff_in_days:
+```{r}
+data$diff_in_days<- difftime(data$Ship_Date, data$Order_Date, units = c("days"))
+```
+
+Plot Sales in relation to Order Date:
+```{r, echo=FALSE, warning=FALSE}
+ggplot(data = data) +
+  geom_point(mapping = aes(x = Order_Date, y = Sales), xlab="Order Date", ylab="Sales")
+
+```
+Plot Profit in relation to Order Date:
+```{r}
+ggplot(data = data) +
+  geom_point(mapping = aes(x = Order_Date, y = Profit), xlab="Order Date", ylab="Profit")
+```
+Some outliers for certain days     
+    
