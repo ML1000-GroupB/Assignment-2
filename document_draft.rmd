@@ -1,0 +1,38 @@
+---
+title: '**Unsupervised Learning **'
+author: "by Crystal (Yunan) Zhu, Anupama r.k, Queenie Tsang"
+date: "18/02/2021"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library("readxl")
+```
+
+```{r, message=FALSE, warning=FALSE}
+#get the names of the columns
+nms <- names(read_excel("US_Superstore_data.xls"))
+
+#if the column name has "Date" in it, read the column as date data type, otherwise guess the type
+ct <- ifelse(grepl("^Date", nms), "date", "guess")
+data <- read_excel("US_Superstore_data.xls", col_types = ct)
+```
+
+
+To look at some basic statistics for this dataset:
+```{r}
+summary(data)
+```
+To look at the dimensions of the data:
+```{r}
+dim(data)
+```
+
+Check that the Order Date and Ship Date column type is POSIXct which is a date data type:
+```{r}
+data
+```
