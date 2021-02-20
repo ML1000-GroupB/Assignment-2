@@ -1,0 +1,91 @@
+---
+title: "Anomaly_Detection"
+author: "Group B"
+date: "20/02/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Abstract
+
+
+
+## Business Case
+
+
+
+## Objective
+
+
+## Data Understanding
+
+
+
+```{r}
+
+```
+
+
+## Descriptive Analysis
+
+```{r}
+
+```
+
+
+## Data Preparation
+
+
+
+```{r}
+
+```
+
+## Test & Train dataset
+
+
+```{r}
+
+```
+
+
+## Model
+
+```{r}
+
+```
+
+
+## Evaluation
+
+```{r}
+
+```
+
+
+## Deployment
+
+```{r}
+
+```
+
+
+## Responsible ML Framework
+
+
+
+
+## Conclusion
+
+
+
+
+## Bibliography
+
+
+
+
+
