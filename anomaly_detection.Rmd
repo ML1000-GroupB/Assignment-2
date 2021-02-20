@@ -26,14 +26,73 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 
+
+library(readxl)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+
 ```
+
+
+```{r}
+#read data from file
+superstore<-read_excel("superstore.xls")
+```
+```{r}
+#intial structure
+
+
+dim(superstore) # 9994* 20
+str(superstore)
+```
+
+```{r}
+
+#drop column Row ID
+superstore["Row ID"]<-NULL
+
+#name columns
+names(superstore)<-c("orderid","order_date","ship_date","ship_mode","customer_id","customer_name","segment","country","city","state","postal_code","region","product_id","category","sub_category","product_name","sales_amt","quantity","discount","profit_amt")
+
+#convert to date 
+superstore$order_date<-as.Date(superstore$order_date)
+superstore$ship_date<-as.Date(superstore$ship_date)
+
+
+```
+
 
 
 ## Descriptive Analysis
 
+
+### continous variables summary
+
 ```{r}
+superstore %>% 
+    select_if(is.numeric)%>% 
+    summary()
+  
+```
+### Profit 
+```{r}
+ggplot(data=superstore)+
+  geom_histogram(mapping=aes(x=profit_amt),binwidth =10)
 
 ```
+
+### Sales
+
+```{r}
+
+ggplot(data=superstore)+
+  geom_histogram(mapping=aes(x=sales_amt),binwidth =10)
+
+```
+
+
+
 
 
 ## Data Preparation
