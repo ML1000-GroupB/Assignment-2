@@ -11,6 +11,7 @@ output:
 ```{r, message=FALSE, warning=FALSE}
 library(tidyverse)
 library("readxl")
+library("ggplot2")
 ```
 
 ```{r, message=FALSE, warning=FALSE}
@@ -125,5 +126,75 @@ Plot Profit in relation to Order Date:
 ggplot(data = data) +
   geom_point(mapping = aes(x = Order_Date, y = Profit), xlab="Order Date", ylab="Profit")
 ```
-Some outliers for certain days     
-    
+Some outliers for certain days
+
+```{r}
+table(data$`Sub-Category`)
+```
+look at the time range for these transactions, ie. start date for Order_Date column:
+```{r}
+min(data$Order_Date)
+#[1] "2014-01-03 UTC"
+```
+
+```{r}
+max(data$Order_Date)
+#[1] "2017-12-30 UTC"
+```
+Basically this dataset covers transactions ranging from 2014-01-03 to 2017-12-30.
+
+
+```{r}
+ggplot(data = data) +
+  geom_bar(mapping = aes(x = Category))
+```
+Most type of products sold belong to the Office supplies category.
+
+
+```{r}
+ggplot(data = data) +
+  geom_bar(mapping = aes(y = `Sub-Category`))
+```
+
+```{r}
+ggplot(data = data, mapping = aes(x = Sales)) +
+  xlim(0, 5000) +
+  geom_histogram(binwidth = 5)
+```
+Most sales are very few items (<500).
+
+```{r}
+ggplot(data = data, mapping = aes(x = Quantity)) +
+  geom_histogram(binwidth = 5)
+```
+```{r}
+ggplot(data = data) +
+  geom_histogram(mapping = aes(x = Discount), xlab="Discount")
+```
+Sales transactions mostly do not involve discounts.
+
+
+Visualise sales transactions by state over time (order date).
+```{r}
+p <- ggplot(data, aes(Order_Date, Sales)) +
+      geom_line(aes(group = State), colour = "grey50") +
+      geom_point(aes(colour = State))
+p <- p + guides(shape = guide_legend(override.aes = list(size = 0.5)),  #this is to make legend smaller
+                color = guide_legend(override.aes = list(size = 2)))
+p
+```
+
+How does profit change with sub-category?
+```{r}
+ #density plot where the count is standardized,area under each frequency is 1 
+ggplot(data = data, mapping = aes(x = Sales, y = ..density..)) +   
+  geom_freqpoly(mapping = aes(colour = `Sub-Category`), binwidth = 500)
+```
+It looks like some categories of items ie. supplies or accessories have negative sales values.
+
+
+How does sales vary across sub category?
+```{r}
+ggplot(data = data, mapping = aes(x = Sales, y = `Sub-Category` )) +
+  geom_boxplot()
+```
