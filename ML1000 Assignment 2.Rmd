@@ -7,9 +7,29 @@ output:
   html_document: default
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+# To do list:  
+
+
+- **Add Pie charts! - by sub_category, region**  
+
+
+- **Create a Month variable - to see the change of sales/profits by month?**  
+
+
+- **bar charts of profits/sales by region**  
+
+
+- **Output the characteristics of the orders with the highest and lowest profits/sales - e.g. what made the order? when? bought what product? in which city/state/region? Any discount?**  
+
+
+- **relationship between discount & sales, discount & profits, sales & profits, and the role of region?**  
+
+
+- **from someone's analysis - there is no significant change between the four discount categories when it comes to Sales**  
+
+
+- **sales/profits by month, rather than by date? color by region?**  
+
 
 
 
@@ -41,7 +61,8 @@ data_miss=data[!complete.cases(data),]
 ```
 
 
-Get a general idea of the data set.
+
+Get a general idea of the data set.  
 
 
 ```{r}
@@ -220,27 +241,6 @@ ggplot(data = data, mapping = aes(x = Sales, y = `Sub_Category` )) +
   geom_boxplot()
 ```
 
-
-<span style="color: red;"> Add Pie charts! - by sub_category, region etc </span>
-
-
-<span style="color: red;"> Create a Month variable - to see the change of sales/profits by month? </span>
-
-
-<span style="color: red;"> bar charts of profits/sales by region </span>
-
-
-<span style="color: red;"> Output the characteristics of the orders with the highest and lowest profits/sales - e.g. what made the order? when? bought what product? in which city/state/region? Any discount? </span>
-
-
-<span style="color: red;"> relationship between discount & sales, discount & profits, sales & profits, and the role of region? </span>
-
-
-<span style="color: red;"> from someone's analysis - there is no significant change between the four discount categories when it comes to Sales </span>
-
-
-
-<span style="color: red;"> sales/profits by month, rather than by date? color by region? </span>
 
 
 
