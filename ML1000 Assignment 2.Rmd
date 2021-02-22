@@ -1,0 +1,248 @@
+---
+title: "ML 1000 Assignment 2"
+author: "by Anupama r.k, Queenie Tsang, Crystal (Yunan) Zhu"
+date: "21/02/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE}
+library(tidyverse)
+library("ggplot2")
+data=read.csv("US_Superstore_data.csv")
+data$Order.Date=as.Date(data$Order.Date)
+data$Ship.Date=as.Date(data$Ship.Date)
+
+diff_in_days=as.numeric(data$Ship.Date-data$Order.Date)
+data=cbind(data,diff_in_days)
+
+#check dup
+#data %>% distinct()
+data_nodup=distinct(data,data[,1:21], keep_all=TRUE)[,-22]
+#dim did not change - no dup
+
+#check missing values
+n=c()
+for (i in 1:ncol(data)) {
+  n[i]=sum(is.na(data[,i]))
+}
+missing_values=paste0(colnames(data),rep("-",ncol(data)),n,rep(" missing values",))
+#cat("The number of missing values for each variable are:")
+missing_values
+#no missing values
+data_miss=data[!complete.cases(data),]
+```
+
+
+Get a general idea of the data set.
+
+
+```{r}
+length(unique(data$Customer.ID))
+#793 unique customer IDs
+length(unique(data$Customer.Name))
+#793 unique customer names - drop one of these two vars
+
+
+length(unique(data$Order.Date))
+#1237 unique order dates
+length(unique(data$Ship.Date))
+#1334 unique ship dates - more unique ship dates than order dates - orders made on the same day were shipped in different dates??
+
+length(unique(data$Segment))
+unique(data$Segment)
+#"Consumer"    "Corporate"   "Home Office"
+
+unique(data$Country)
+#all are from US - could drop this variable due to no-variation introduced by it
+
+length(unique(data$City))
+#531 different cities
+
+length(unique(data$State))
+#49 states
+
+length(unique(data$Postal.Code))
+#631 postal code - 793 unique customer IDs - some customers live very close!
+
+unique(data$Region)
+#only 4 regions
+
+unique(data$Category)
+#only 3 categories - "Furniture" "Office Supplies" "Technology"
+
+length(unique(data$Sub.Category))
+unique(data$Sub.Category)
+#17 sub-categories 
+
+length(unique(data$Product.Name))
+#1850 product names
+length(unique(data$Product.ID))
+#1862 product IDs - potential redundant variables!
+
+hist(data$diff_in_days)
+
+summary(data$Sales)
+boxplot(data$Sales)
+hist(data$Sales)
+#a large amount of orders with very small Sales!
+
+
+summary(data$Quantity)
+boxplot(data$Quantity)
+#not many outliers - the #of products in each order is stable?
+hist(data$Quantity)
+#very skewed distribution - most of the orders have small #of items
+
+summary(data$Discount)
+boxplot(data$Discount)
+#a strange looking bodataplot? - median & 3rd quantile are the same (0.2) - not many orders have high discounts
+hist(data$Discount)
+#most of the orders were placed without any discounts or with 20% off
+
+summary(data$Profit)
+boxplot(data$Profit)
+#most of the profits are outside of the box - but most of them clustered close to the box(not with so extreme values)
+hist(data$Profit)
+#most of the orders have profits ~1000 (or ~800?), and ~ -800
+```
+
+
+Remove the dot in the column names and replace with "_" to make variable names easier to handle:
+
+```{r, echo=FALSE, warning=FALSE}
+#replace . with _ in colnames
+colnames(data) <- gsub("\\.", "_", colnames(data))
+#check column names have been changed:
+colnames(data)
+```
+
+
+# Exploratory Data Analysis  
+
+
+Plot Sales in relation to Order Date:  
+
+
+```{r, echo=FALSE, warning=FALSE}
+ggplot(data = data) +
+  geom_point(mapping = aes(x = Order_Date, y = Sales), xlab="Order Date", ylab="Sales")
+```
+Plot Profit in relation to Order Date:
+```{r}
+ggplot(data = data) +
+  geom_point(mapping = aes(x = Order_Date, y = Profit), xlab="Order Date", ylab="Profit")
+```
+Some outliers for certain days
+
+
+```{r}
+table(data$`Sub_Category`)
+```
+look at the time range for these transactions, ie. start date for Order_Date column:
+
+```{r}
+summary(data$Order_Date)
+#[1] min "2014-01-03", max "2017-12-30"
+```
+Basically this dataset covers transactions ranging from 2014-01-03 to 2017-12-30.
+
+
+```{r}
+ggplot(data = data) +
+  geom_bar(mapping = aes(x = Category),fill="green4")
+```
+Most type of products sold belong to the Office supplies category.
+
+
+```{r}
+ggplot(data = data) +
+  geom_bar(mapping = aes(y = `Sub_Category`), fill="green4")
+```
+
+```{r}
+ggplot(data = data, mapping = aes(x = Sales)) +
+  xlim(0, 5000) +
+  geom_histogram(binwidth = 5,fill="green4")
+```
+Most sales are very few items (<500).
+
+```{r}
+ggplot(data = data, mapping = aes(x = Quantity)) +
+  geom_histogram(binwidth = 0.5,fill="green4")
+```
+
+
+```{r}
+ggplot(data = data) +
+  geom_histogram(mapping = aes(x = Discount), 
+                 binwidth = 0.05,
+                 xlab="Discount",
+                 fill="green4")
+```
+Sales transactions mostly do not involve discounts.
+
+
+Visualise sales transactions by Region over time (order date).
+```{r}
+ ggplot(data, aes(Order_Date, Sales,color=Region)) +
+      geom_line() 
+```
+
+Let's zoom in a little bit - Visualise sales transactions by Region over time (order date).
+
+```{r}
+ ggplot(data, aes(Order_Date, Sales,color=Region)) +
+      geom_line() +
+      ylim(0,5000)
+
+```
+
+How does profit change with sub-category?
+```{r}
+ #density plot where the count is standardized,area under each frequency is 1 
+ggplot(data = data, mapping = aes(x = Sales, y = ..density..)) +   
+  geom_freqpoly(mapping = aes(colour = Sub_Category), binwidth = 500)
+```
+It looks like some categories of items ie. supplies or accessories have negative sales values.
+
+
+How does sales vary across sub category?
+```{r}
+ggplot(data = data, mapping = aes(x = Sales, y = `Sub_Category` )) +
+  geom_boxplot()
+```
+
+
+<span style="color: red;"> Add Pie charts! - by sub_category, region etc </span>
+
+
+<span style="color: red;"> Create a Month variable - to see the change of sales/profits by month? </span>
+
+
+<span style="color: red;"> bar charts of profits/sales by region </span>
+
+
+<span style="color: red;"> Output the characteristics of the orders with the highest and lowest profits/sales - e.g. what made the order? when? bought what product? in which city/state/region? Any discount? </span>
+
+
+<span style="color: red;"> relationship between discount & sales, discount & profits, sales & profits, and the role of region? </span>
+
+
+<span style="color: red;"> from someone's analysis - there is no significant change between the four discount categories when it comes to Sales </span>
+
+
+
+<span style="color: red;"> sales/profits by month, rather than by date? color by region? </span>
+
+
+
+
+
