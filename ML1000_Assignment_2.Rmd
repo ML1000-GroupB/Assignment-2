@@ -1,0 +1,557 @@
+---
+title: "ML 1000 Assignment 2"
+author: "by Anupama r.k, Queenie Tsang, Crystal (Yunan) Zhu"
+date: "21/02/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+# To do list:  
+
+
+- **Add Pie charts! - by sub_category, region**  # (done)
+
+
+- **Create a Month variable - to see the change of sales/profits by month?**  
+
+
+- **bar charts of profits/sales by region**  #(done)
+
+
+- **Output the characteristics of the orders with the highest and lowest profits/sales - e.g. what made the order? when? bought what product? in which city/state/region? Any discount?**  
+
+
+- **relationship between discount & sales, discount & profits, sales & profits, and the role of region?**  
+
+
+- **from someone's analysis - there is no significant change between the four discount categories when it comes to Sales**  
+
+
+- **sales/profits by month, rather than by date? color by region?**  
+
+
+
+
+
+
+## Abstract
+
+Anomaly detection or Outlier detection identifies data points, events or observations that deviate from dataset's normal behavior. Anomalous data indicate critical incidents or potential opportunities. In order to take advantage of opportunities or fix costly problems anomaly detection has to be done in real time. Unsupervised machine learning models can be used to automate anomaly detection. Unsupervised anomaly detection algorithms scores data based on intrinsic properties of the dataset. Distances and densities are used to give an estimation what is normal and what is an outlier. Anomaly detection monitor is a tool developed for an online retailer to check product quality issues like profit opportunities and sales glitches. The application is built using R and Shinyapp following CRISP-DM framework. 
+
+
+## Business Case
+
+
+
+## Objective
+Detect point anomalies from superstore dataset using K-NN and clustering methods
+
+## Data Understanding
+
+US Superstore dataset is sourced from [US uperstore dataset](https://www.kaggle.com/juhi1994/superstore) . The dataset have online orders for  Superstores in U.S. from 2014-2018. Tableau community is the owner of the dataset. The dataset has 9994 records and 21 attributes.
+
+### Import data
+
+```{r echo=FALSE,message=FALSE,warning=FALSE}
+
+
+#load libraries
+library(readxl)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(anomalize)
+library(lemon)
+library(ggsci)
+library(tidyverse)
+library("ggplot2")
+```
+```{r}
+superstore<- read_excel("US_Superstore_data.xls")
+```
+```{r include=FALSE}
+
+#print dataset details
+data_superstore<-as.data.frame( summary.default(superstore))
+data_superstore<-data_superstore[-c(1:42),c(1,3)]
+names(data_superstore)<-c("Attribute"," Data Type")
+rownames(data_superstore)<-c()
+data_superstore$Description<-c("row number","unique order number","order placed date","order shipping date","shipping mode of  order","unique customer id for order","name of customer","section of product","country based on order","city based on order","state based on order","pin code","region based on order","product id of  product","category of product","sub-category of product","name of product","selling price of product","order quantity","discount on product","profit from product")
+knit_print.data.frame <- lemon_print
+
+```
+
+```{r caption ="Dataset description" ,render=lemon_print}
+data_superstore
+```
+
+
+
+
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE}
+
+data=read.csv("US_Superstore_data.csv")
+data$Order.Date=as.Date(data$Order.Date)
+data$Ship.Date=as.Date(data$Ship.Date)
+
+diff_in_days=as.numeric(data$Ship.Date-data$Order.Date)
+data=cbind(data,diff_in_days)
+
+#check dup
+#data %>% distinct()
+data_nodup=distinct(data,data[,1:21], keep_all=TRUE)[,-22]
+#dim did not change - no dup
+
+#check missing values
+n=c()
+for (i in 1:ncol(data)) {
+  n[i]=sum(is.na(data[,i]))
+}
+missing_values=paste0(colnames(data),rep("-",ncol(data)),n,rep(" missing values",))
+#cat("The number of missing values for each variable are:")
+missing_values
+#no missing values
+data_miss=data[!complete.cases(data),]
+```
+
+
+
+Get a general idea of the data set.  
+
+
+```{r}
+length(unique(data$Customer.ID))
+#793 unique customer IDs
+length(unique(data$Customer.Name))
+#793 unique customer names - drop one of these two vars
+
+
+length(unique(data$Order.Date))
+#1237 unique order dates
+length(unique(data$Ship.Date))
+#1334 unique ship dates - more unique ship dates than order dates - orders made on the same day were shipped in different dates??
+
+length(unique(data$Segment))
+unique(data$Segment)
+#"Consumer"    "Corporate"   "Home Office"
+
+unique(data$Country)
+#all are from US - could drop this variable due to no-variation introduced by it
+
+length(unique(data$City))
+#531 different cities
+
+length(unique(data$State))
+#49 states
+
+length(unique(data$Postal.Code))
+#631 postal code - 793 unique customer IDs - some customers live very close!
+
+unique(data$Region)
+#only 4 regions
+
+unique(data$Category)
+#only 3 categories - "Furniture" "Office Supplies" "Technology"
+
+length(unique(data$Sub.Category))
+unique(data$Sub.Category)
+#17 sub-categories 
+
+length(unique(data$Product.Name))
+#1850 product names
+length(unique(data$Product.ID))
+#1862 product IDs - potential redundant variables!
+
+hist(data$diff_in_days)
+#The time difference between order date and ship date typically takes 4 days. 
+
+summary(data$Sales)
+boxplot(data$Sales)
+hist(data$Sales)
+#a large amount of orders with very small Sales!
+
+
+summary(data$Quantity)
+boxplot(data$Quantity)
+#not many outliers - the #of products in each order is stable?
+hist(data$Quantity)
+#very skewed distribution - most of the orders have small #of items
+
+summary(data$Discount)
+boxplot(data$Discount)
+#a strange looking box dataplot? - median & 3rd quantile are the same (0.2) - not many orders have high discounts
+hist(data$Discount)
+#most of the orders were placed without any discounts or with 20% off
+
+summary(data$Profit)
+boxplot(data$Profit)
+#most of the profits are outside of the box - but most of them clustered close to the box(not with so extreme values)
+hist(data$Profit)
+#most of the orders have profits ~1000 (or ~800?), and ~ -800
+```
+
+
+Remove the dot in the column names and replace with "_" to make variable names easier to handle:
+
+```{r, echo=FALSE, warning=FALSE}
+#replace . with _ in colnames
+colnames(data) <- gsub("\\.", "_", colnames(data))
+#check column names have been changed:
+colnames(data)
+```
+
+
+# Exploratory Data Analysis  
+
+
+Plot Sales in relation to Order Date:  
+
+
+```{r, echo=FALSE, warning=FALSE}
+ggplot(data = data) +
+  geom_point(mapping = aes(x = Order_Date, y = Sales), xlab="Order Date", ylab="Sales")
+```
+Plot Profit in relation to Order Date:
+```{r}
+ggplot(data = data) +
+  geom_point(mapping = aes(x = Order_Date, y = Profit), xlab="Order Date", ylab="Profit")
+```
+Some outliers for certain days
+
+
+```{r}
+table(data$`Sub_Category`)
+```
+look at the time range for these transactions, ie. start date for Order_Date column:
+
+```{r}
+summary(data$Order_Date)
+#[1] min "2014-01-03", max "2017-12-30"
+```
+Basically this dataset covers transactions ranging from 2014-01-03 to 2017-12-30.
+
+
+```{r}
+ggplot(data = data) +
+  geom_bar(mapping = aes(x = Category),fill="green4")
+```
+Most type of products sold belong to the Office supplies category.
+
+
+```{r}
+ggplot(data = data) +
+  geom_bar(mapping = aes(y = `Sub_Category`), fill="green4")
+```
+
+```{r}
+ggplot(data = data, mapping = aes(x = Sales)) +
+  xlim(0, 5000) +
+  geom_histogram(binwidth = 5,fill="green4")
+```
+Most sales are very few items (<500).
+
+```{r}
+ggplot(data = data, mapping = aes(x = Quantity)) +
+  geom_histogram(binwidth = 0.5,fill="green4")
+```
+
+
+```{r}
+ggplot(data = data) +
+  geom_histogram(mapping = aes(x = Discount), 
+                 binwidth = 0.05,
+                 xlab="Discount",
+                 fill="green4")
+```
+Sales transactions mostly do not involve discounts.
+
+
+Visualise sales transactions by Region over time (order date).
+```{r}
+ ggplot(data, aes(Order_Date, Sales,color=Region)) +
+      geom_line() 
+```
+
+Let's zoom in a little bit - Visualise sales transactions by Region over time (order date).
+
+```{r}
+ ggplot(data, aes(Order_Date, Sales,color=Region)) +
+      geom_line() +
+      ylim(0,5000)
+
+```
+
+How does profit change with sub-category?
+```{r}
+ #density plot where the count is standardized,area under each frequency is 1 
+ggplot(data = data, mapping = aes(x = Sales, y = ..density..)) +   
+  geom_freqpoly(mapping = aes(colour = Sub_Category), binwidth = 500)
+```
+It looks like some categories of items ie. supplies or accessories have negative sales values.
+
+
+How does sales vary across sub category?
+```{r}
+ggplot(data = data, mapping = aes(x = Sales, y = `Sub_Category` )) +
+  geom_boxplot()
+```
+
+```{r}
+ggplot(data =data, mapping = aes(x = Ship_Mode)) +
+  geom_bar()
+
+```
+Most transactions are shipped via Standard Class method.
+
+
+```{r}
+ggplot(data)+
+geom_histogram(mapping=aes(x=Profit),fill="green3")+
+coord_cartesian(ylim = c(0, 100))+
+labs(title=" Profit Distribution")
+```
+```{r}
+ggplot(data)+
+geom_histogram(mapping=aes(x=Sales),fill="sienna3")+
+coord_cartesian(ylim = c(0, 100))+labs(title=" Sales Distribution")
+```
+```{r}
+ggplot(data) +
+geom_point(mapping = aes(x = Profit, y = Discount),colour="violetred3")+
+labs(title=" Profit Discount Distribution")
+```
+### Sales Profit
+```{r}
+ggplot(data) +
+geom_point(mapping = aes(x = Sales, y = Profit),colour="limegreen")+
+labs(title=" Sales Profit Distribution")
+```
+```{r}
+#product name and product id mismatch
+data %>% 
+  distinct(Product_Name,Product_ID) %>% 
+  group_by(Product_ID) %>% 
+  filter(n()>1) %>% 
+  select(Product_ID)
+
+```
+
+
+```{r}
+#total category and subcategory 
+
+count_category<-unique(data$Category)
+length(count_category)
+
+
+count_subcategory<-unique(data$Sub_Category)
+length(count_subcategory)
+
+data %>% 
+  distinct(Category, Sub_Category)
+
+```
+```{r}
+
+superstore_sales<-data %>% 
+                  select(Order_Date,Sales)
+
+
+superstore_sales<-as_tibble(superstore_sales)
+
+```
+
+
+
+
+
+Transactions by region:
+```{r}
+bar <- ggplot(data = data) + 
+  geom_bar(
+    mapping = aes(x = Region, fill = Region), 
+    show.legend = FALSE,
+    width = 1
+  ) + 
+  theme(aspect.ratio = 1) +
+  labs(x = NULL, y = NULL)
+
+bar + coord_polar()
+```
+The above chart shows proportions of transactions from the different regions.
+
+
+```{r, echo=FALSE, warning=FALSE}
+#renaming Sub-Category to Sub_Category to avoid error with ggplot: 
+names(data)[names(data)=="Sub-Category"] <- "Sub_Category"
+```
+
+
+```{r}
+#Extracting the rows for South region, and sub-categories:
+South <- data %>% 
+  select(Region, Sub_Category) %>%
+  filter(Region == "South")
+
+bar <- ggplot(data = South) + 
+  geom_bar(
+    mapping = aes(x = Sub_Category, fill = Sub_Category), 
+    show.legend = FALSE,
+    width = 1
+  ) + 
+  theme(aspect.ratio = 1) +
+  labs(x = NULL, y = NULL)
+
+bar + coord_polar()
+
+```
+In the South, most transactions are Binders, Paper, or Furnishings.
+
+```{r}
+#Extracting the rows for Central region, and sub-categories:
+Central <- data %>% 
+  select(Region, Sub_Category) %>%
+  filter(Region == "Central")
+
+bar <- ggplot(data = Central) + 
+  geom_bar(
+    mapping = aes(x = Sub_Category, fill = Sub_Category), 
+    show.legend = FALSE,
+    width = 1
+  ) + 
+  theme(aspect.ratio = 1) +
+  labs(x = NULL, y = NULL)
+
+bar + coord_polar()
+
+```
+
+```{r}
+#Extracting the rows for West region, and sub-categories:
+West <- data %>% 
+  select(Region, Sub_Category) %>%
+  filter(Region == "West")
+
+bar <- ggplot(data = West) + 
+  geom_bar(
+    mapping = aes(x = Sub_Category, fill = Sub_Category), 
+    show.legend = FALSE,
+    width = 1
+  ) + 
+  theme(aspect.ratio = 1) +
+  labs(x = NULL, y = NULL)
+
+bar + coord_polar()
+
+```
+
+```{r}
+#Extracting the rows for East region, and sub-categories:
+East <- data %>% 
+  select(Region, Sub_Category) %>%
+  filter(Region == "East")
+
+bar <- ggplot(data = East) + 
+  geom_bar(
+    mapping = aes(x = Sub_Category, fill = Sub_Category), 
+    show.legend = FALSE,
+    width = 1
+  ) + 
+  theme(aspect.ratio = 1) +
+  labs(x = NULL, y = NULL)
+
+bar + coord_polar()
+
+```
+
+
+- **bar charts of profits/sales by region**  
+
+```{r}
+ggplot(data = data) + 
+  geom_bar(mapping = aes(x = Region, fill = Sales)) +
+  ggtitle("Total Sales by region") +
+  ylab("Sales")
+
+```
+Total sales per region.
+
+
+
+
+```{r}
+ggplot(data = data) + 
+  geom_bar(mapping = aes(x = Region, fill = Profit))+
+  ggtitle("Total Profit by region")+
+  ylab("Profit")
+```
+
+
+
+
+
+
+
+
+
+
+## Data Preparation
+
+#drop columns with redundant information
+superstore[,c("Rowid","customer_name","country")]<-NULL
+
+```{r}
+#make a copy of the original dataset and copy to data1
+data1 <- data
+```
+
+drop column Row ID because it is not necessary; it is the row number from the original excel file. The country variable is also not needed because all the values are United states. 
+Customer_Name and Customer_ID give redundant information. So we will drop the Customer_Name column and keep only the Customer_ID column.
+```{r}
+data1[,c("Row_ID", "Country", "Customer_Name")]<-NULL
+```
+
+
+## Test & Train dataset
+
+
+```{r}
+
+```
+
+
+## Model
+
+```{r}
+
+```
+
+
+## Evaluation
+
+```{r}
+
+```
+
+
+## Deployment
+
+```{r}
+
+```
+
+
+## Responsible ML Framework
+
+
+
+
+## Conclusion
+
+
+
+
+## References
+
+
