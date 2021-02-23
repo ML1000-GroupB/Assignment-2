@@ -34,7 +34,7 @@ output:
 - **Create a Month variable - to see the change of sales/profits by month?**  
 
 
-- **bar charts of profits/sales by region**  
+- **bar charts of profits/sales by region**  #(done)
 
 
 - **Output the characteristics of the orders with the highest and lowest profits/sales - e.g. what made the order? when? bought what product? in which city/state/region? Any discount?**  
@@ -372,6 +372,26 @@ bar + coord_polar()
 ```
 
 
+- **bar charts of profits/sales by region**  
+
+```{r}
+ggplot(data = data) + 
+  geom_bar(mapping = aes(x = Region, fill = Sales)) +
+  ggtitle("Total Sales by region") +
+  ylab("Sales")
+
+```
+Total sales per region.
+
+
+
+
+```{r}
+ggplot(data = data) + 
+  geom_bar(mapping = aes(x = Region, fill = Profit))+
+  ggtitle("Total Profit by region")+
+  ylab("Profit")
+```
 
 ## Data Preparation
 
@@ -397,17 +417,6 @@ Customer_Name and Customer_ID give redundant information. So we will drop the Cu
 data1["Customer_Name"]<-NULL
 ```
 
-
-Product ID and Product Name are also variables which give the same type of information. So we will drop product name.
-```{r}
-data1["Product_Name"]<-NULL
-```
-
-The Category column also is a bit too broad with just 3 categories of Office Supplies, Furniture, and Technology so we will also
-drop this column.
-```{r}
-data1["Category"]<-NULL
-```
 
 ```{r}
 
