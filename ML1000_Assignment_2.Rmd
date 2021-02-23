@@ -512,11 +512,6 @@ corrplot(cor_result$r, type = "upper", order = "hclust", tl.col = "black", tl.sr
 
 ```
 
-
-```{r}
-corrplot(M, method = "number", type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)  #display the correlation coefficient
-
-```
 Discount is negatively correlated with profit, whereas sales is positively correlated with profit. The time between order date and
 ship date (diff_in_days) is not correlated with sales, quantity, discount, or profit.
 
