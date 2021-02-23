@@ -67,6 +67,9 @@ library(tidyverse)
 library(ggplot2)
 library(corrplot)   #for correlation matrix
 library(Hmisc)      #for matrix of correlations and P-values
+library(ggpubr)     #for making plots
+library(factoextra) #for extracting and visualising results of multivariate data analyses 
+
 ```
 ```{r}
 superstore<- read_excel("US_Superstore_data.xls")
@@ -522,8 +525,6 @@ ship date (diff_in_days) is not correlated with sales, quantity, discount, or pr
 
 ## Data Preparation
 
-#drop columns with redundant information
-superstore[,c("Rowid","customer_name","country")]<-NULL
 
 ```{r}
 #make a copy of the original dataset and copy to data1
@@ -533,27 +534,100 @@ data1 <- data
 drop column Row ID because it is not necessary; it is the row number from the original excel file. The country variable is also not needed because all the values are United states. 
 Customer_Name and Customer_ID give redundant information. So we will drop the Customer_Name column and keep only the Customer_ID column.
 ```{r}
-data1[,c("Row_ID", "Country", "Customer_Name")]<-NULL
+data1[,c("Row_ID","ï__Row_ID", "Country", "Customer_Name")]<-NULL
 ```
 
-
-
-
-
-
-## Test & Train dataset
 
 
 ```{r}
+head(data1)
 
 ```
 
+For this K-means clustering we will use the numeric variabels only: which are sales, quantity, discount, profit, diff_in_days (columns 15 - 19). 
+K means clustering is affected by the starting assignment points, so we will try with 25 different starting assignments (nstart = 25), and see which ones work the best.
+
+(https://www.datanovia.com/en/blog/k-means-clustering-visualization-in-r-step-by-step-guide/)
+
+```{r}
+#Compute K-means clustering with k=3 (3 initial distinct cluster centres)
+set.seed(123)
+
+results_kmeans <- kmeans(scale(data1[,(15:19)]), 3, nstart =25)
+                         
+#kmeans clusters to show the group of the individuals
+results_kmeans$cluster
+```
+
+```{r}
+summary(results_kmeans)
+
+```
+# Plot K-means
+
+The factoextra package contains a function called fviz_cluster() which can be used to visualize kmeans clusters. The input required is the original dataset, and the kmeans results. These are used to produce plots which show points that represent observations.
+
+```{r}
+fviz_cluster(results_kmeans, data = data1[,(15:19)],
+             palette = c("#2E9FDF", "#E495A5", "#E7B800"), 
+             geom = "point",
+             ellipse.type = "convex", 
+             ggtheme = theme_bw()
+             )
+
+```
+
+Reduce dimensions using Principal Component Analysis.
+
+```{r}
+results_pca <- prcomp(data1[,(15:19)], scale=TRUE)
+
+#Coordinates of individual observations
+indiv_coordinates <- as.data.frame(get_pca_ind(results_pca)$coord)
+
+#Add clusters obtained through the Kmeans algorithm
+indiv_coordinates$cluster <- factor(results_kmeans$cluster)
+
+#Add region from the dataset
+indiv_coordinates$Region <- data1$Region
+
+#look at the first few rows of individual coordinates
+head(indiv_coordinates)
+```
+
+Percentage of variance explained by dimensions.
+
+```{r}
+eigenvalue <- round(get_eigenvalue(results_pca), 1)
+variance.percent <- eigenvalue$variance.percent
+head(eigenvalue)
+
+```
+
+
+```{r}
+#To visualize the k-means clusters:
+
+ggscatter(
+  indiv_coordinates, x = "Dim.1", y = "Dim.2",
+  color = "cluster", palette = "npg", ellipse = TRUE, ellipse.type = "convex",    #adding the concentration ellipses
+  shape = "Region", size = 1.5,  legend = "right", ggtheme = theme_bw(),
+  xlab = paste0("Dim 1 (", variance.percent[1], "% )" ),
+  ylab = paste0("Dim 2 (", variance.percent[2], "% )" )
+) +
+  stat_mean(aes(color = cluster), size = 4)      #stat_mean is used for adding the cluster centroid
+```
+
+The clustering plot shows that the groups are very close together, and overlap slightly. The clusters could be further apart with some tuning. 
 
 ## Model
 
 ```{r}
 
 ```
+
+
+
 
 
 ## Evaluation
@@ -582,4 +656,6 @@ data1[,c("Row_ID", "Country", "Customer_Name")]<-NULL
 
 ## References
 
+https://www.datanovia.com/en/blog/k-means-clustering-visualization-in-r-step-by-step-guide/
 
+https://www.tidymodels.org/learn/statistics/k-means/
