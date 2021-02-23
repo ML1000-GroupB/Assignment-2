@@ -290,11 +290,9 @@ superstore_sales<-as_tibble(superstore_sales)
 superstore_unq<-superstore[!duplicated(superstore[c("sales_amt","profit_amt","quantity","discount")]),]
 
 #select numerical variables
-superstore_lof<-superstore[,c("sales_amt","profit_amt","quantity","discount")]
-superstore_lof<-distinct(superstore_lof)
+superstore_lof<-superstore_unq[,c("sales_amt","profit_amt","quantity","discount")]
 
 
-dim(superstore_lof)
 
  # for k=10
  outlier.scores <- lofactor(superstore_lof, k=10)
@@ -307,6 +305,9 @@ dim(superstore_lof)
  #top 5 outliers transactons
  outliers <- order(outlier.scores, decreasing=T)[1:5]
  print(outliers)
+ 
+ 
+ #dataframe for outliers
  superstore_unq[c(2452,665,6269,7555,5613),]
 
 ```
