@@ -7,10 +7,28 @@ output:
   html_document: default
 ---
 
+## Abstract
+
+
+
+## Business Case
+
+
+
+## Objective
+
+
+## Data Understanding
+
+
+
+
+
+
 # To do list:  
 
 
-- **Add Pie charts! - by sub_category, region**  
+- **Add Pie charts! - by sub_category, region**  # (done)
 
 
 - **Create a Month variable - to see the change of sales/profits by month?**  
@@ -109,6 +127,7 @@ length(unique(data$Product.ID))
 #1862 product IDs - potential redundant variables!
 
 hist(data$diff_in_days)
+#The time difference between order date and ship date typically takes 4 days. 
 
 summary(data$Sales)
 boxplot(data$Sales)
@@ -124,7 +143,7 @@ hist(data$Quantity)
 
 summary(data$Discount)
 boxplot(data$Discount)
-#a strange looking bodataplot? - median & 3rd quantile are the same (0.2) - not many orders have high discounts
+#a strange looking box dataplot? - median & 3rd quantile are the same (0.2) - not many orders have high discounts
 hist(data$Discount)
 #most of the orders were placed without any discounts or with 20% off
 
@@ -241,8 +260,198 @@ ggplot(data = data, mapping = aes(x = Sales, y = `Sub_Category` )) +
   geom_boxplot()
 ```
 
+```{r}
+ggplot(data =data, mapping = aes(x = Ship_Mode)) +
+  geom_bar()
+
+```
+Most transactions are shipped via Standard Class method.
+
+
+```{r}
+
+```
+
+Transactions by region:
+```{r}
+bar <- ggplot(data = data) + 
+  geom_bar(
+    mapping = aes(x = Region, fill = Region), 
+    show.legend = FALSE,
+    width = 1
+  ) + 
+  theme(aspect.ratio = 1) +
+  labs(x = NULL, y = NULL)
+
+bar + coord_polar()
+```
+The above chart shows proportions of transactions from the different regions.
+
+
+```{r, echo=FALSE, warning=FALSE}
+#renaming Sub-Category to Sub_Category to avoid error with ggplot: 
+names(data)[names(data)=="Sub-Category"] <- "Sub_Category"
+```
+
+
+```{r}
+#Extracting the rows for South region, and sub-categories:
+South <- data %>% 
+  select(Region, Sub_Category) %>%
+  filter(Region == "South")
+
+bar <- ggplot(data = South) + 
+  geom_bar(
+    mapping = aes(x = Sub_Category, fill = Sub_Category), 
+    show.legend = FALSE,
+    width = 1
+  ) + 
+  theme(aspect.ratio = 1) +
+  labs(x = NULL, y = NULL)
+
+bar + coord_polar()
+
+```
+In the South, most transactions are Binders, Paper, or Furnishings.
+
+```{r}
+#Extracting the rows for Central region, and sub-categories:
+Central <- data %>% 
+  select(Region, Sub_Category) %>%
+  filter(Region == "Central")
+
+bar <- ggplot(data = Central) + 
+  geom_bar(
+    mapping = aes(x = Sub_Category, fill = Sub_Category), 
+    show.legend = FALSE,
+    width = 1
+  ) + 
+  theme(aspect.ratio = 1) +
+  labs(x = NULL, y = NULL)
+
+bar + coord_polar()
+
+```
+
+```{r}
+#Extracting the rows for West region, and sub-categories:
+West <- data %>% 
+  select(Region, Sub_Category) %>%
+  filter(Region == "West")
+
+bar <- ggplot(data = West) + 
+  geom_bar(
+    mapping = aes(x = Sub_Category, fill = Sub_Category), 
+    show.legend = FALSE,
+    width = 1
+  ) + 
+  theme(aspect.ratio = 1) +
+  labs(x = NULL, y = NULL)
+
+bar + coord_polar()
+
+```
+
+```{r}
+#Extracting the rows for East region, and sub-categories:
+East <- data %>% 
+  select(Region, Sub_Category) %>%
+  filter(Region == "East")
+
+bar <- ggplot(data = East) + 
+  geom_bar(
+    mapping = aes(x = Sub_Category, fill = Sub_Category), 
+    show.legend = FALSE,
+    width = 1
+  ) + 
+  theme(aspect.ratio = 1) +
+  labs(x = NULL, y = NULL)
+
+bar + coord_polar()
+
+```
 
 
 
+## Data Preparation
+
+
+
+```{r}
+#make a copy of the original dataset and copy to data1
+data1 <- data
+```
+
+#drop column Row ID because it is not necessary; it is the row number from the original excel file.
+```{r}
+data1["Row_ID"]<-NULL
+```
+
+The country variable is also not needed because all the values are United states:
+```{r}
+data1["Country"]<-NULL
+```
+
+Customer_Name and Customer_ID give redundant information. So we will drop the Customer_Name column and keep only the Customer_ID column.
+```{r}
+data1["Customer_Name"]<-NULL
+```
+
+
+Product ID and Product Name are also variables which give the same type of information. So we will drop product name.
+```{r}
+data1["Product_Name"]<-NULL
+```
+
+The Category column also is a bit too broad with just 3 categories of Office Supplies, Furniture, and Technology so we will also
+drop this column.
+```{r}
+data1["Category"]<-NULL
+```
+
+```{r}
+
+```
+
+## Test & Train dataset
+
+
+```{r}
+
+```
+
+
+## Model
+
+```{r}
+
+```
+
+
+## Evaluation
+
+```{r}
+
+```
+
+
+## Deployment
+
+```{r}
+
+```
+
+
+## Responsible ML Framework
+
+
+
+
+## Conclusion
+
+
+
+
+## References
 
 
