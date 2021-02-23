@@ -64,7 +64,9 @@ library(anomalize)
 library(lemon)
 library(ggsci)
 library(tidyverse)
-library("ggplot2")
+library(ggplot2)
+library(corrplot)   #for correlation matrix
+library(Hmisc)      #for matrix of correlations and P-values
 ```
 ```{r}
 superstore<- read_excel("US_Superstore_data.xls")
@@ -488,8 +490,35 @@ ggplot(data = data) +
 ```
 
 
+Look at relationship between numeric variables: 
+
+```{r}
+#subset the numeric variables:
+numeric_vars<- c("Sales", "Quantity", "Discount", "Profit", "diff_in_days")
+num_data <- data[numeric_vars]
+
+```
+
+We'll use a correlation matrix to look at the relationship between numeric variables:
+```{r}
+cor(num_data)
+```
+```{r}
+#correlation matrix with statistical significance
+cor_result=rcorr(as.matrix(num_data))
+
+cor_result$r
+corrplot(cor_result$r, type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)  #display only upper triangle of correlation matrix
+
+```
 
 
+```{r}
+corrplot(M, method = "number", type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)  #display the correlation coefficient
+
+```
+Discount is negatively correlated with profit, whereas sales is positively correlated with profit. The time between order date and
+ship date (diff_in_days) is not correlated with sales, quantity, discount, or profit.
 
 
 
@@ -511,6 +540,10 @@ Customer_Name and Customer_ID give redundant information. So we will drop the Cu
 ```{r}
 data1[,c("Row_ID", "Country", "Customer_Name")]<-NULL
 ```
+
+
+
+
 
 
 ## Test & Train dataset
