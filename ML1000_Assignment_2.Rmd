@@ -518,9 +518,8 @@ corrplot(cor_result$r, type = "upper", order = "hclust", tl.col = "black", tl.sr
 Discount is negatively correlated with profit, whereas sales is positively correlated with profit. The time between order date and
 ship date (diff_in_days) is not correlated with sales, quantity, discount, or profit.
 
-
-
-
+Since the difference in days between Order date and Ship date has 0 correlation with the other variables, let's drop diff_in_days 
+for the K-means clustering analysis. 
 
 
 ## Data Preparation
@@ -544,7 +543,14 @@ head(data1)
 
 ```
 
-For this K-means clustering we will use the numeric variabels only: which are sales, quantity, discount, profit, diff_in_days (columns 15 - 19). 
+
+
+
+## Model
+
+
+
+For this K-means clustering we will use the numeric variables only: which are sales, quantity, discount, profit, diff_in_days (columns 15 - 19). 
 K means clustering is affected by the starting assignment points, so we will try with 25 different starting assignments (nstart = 25), and see which ones work the best.
 
 (https://www.datanovia.com/en/blog/k-means-clustering-visualization-in-r-step-by-step-guide/)
@@ -553,7 +559,7 @@ K means clustering is affected by the starting assignment points, so we will try
 #Compute K-means clustering with k=3 (3 initial distinct cluster centres)
 set.seed(123)
 
-results_kmeans <- kmeans(scale(data1[,(15:19)]), 3, nstart =25)
+results_kmeans <- kmeans(scale(data1[,(15:18)]), 3, nstart =25)
                          
 #kmeans clusters to show the group of the individuals
 results_kmeans$cluster
@@ -563,12 +569,24 @@ results_kmeans$cluster
 summary(results_kmeans)
 
 ```
+```{r}
+results_kmeans
+# https://towardsdatascience.com/clustering-analysis-in-r-using-k-means-73eca4fb7967
+
+#cluster means are the centroid vectors
+#clustering vector is the group that the observation is placed into
+#percentage indicates compactness of the clustering or how similar observations are within the same group
+```
+
+The results of this clustering indicate that the within cluster sum of squares by cluster is 37.0 % which means that the observations
+within a given group are not very similar to each other. 
+
 # Plot K-means
 
 The factoextra package contains a function called fviz_cluster() which can be used to visualize kmeans clusters. The input required is the original dataset, and the kmeans results. These are used to produce plots which show points that represent observations.
 
 ```{r}
-fviz_cluster(results_kmeans, data = data1[,(15:19)],
+fviz_cluster(results_kmeans, data = data1[,(15:18)],
              palette = c("#2E9FDF", "#E495A5", "#E7B800"), 
              geom = "point",
              ellipse.type = "convex", 
@@ -604,6 +622,7 @@ head(eigenvalue)
 
 ```
 
+Variance of a group indicates how different members of a group are. Higher variance means greater dissimilarity within a group.
 
 ```{r}
 #To visualize the k-means clusters:
@@ -618,23 +637,123 @@ ggscatter(
   stat_mean(aes(color = cluster), size = 4)      #stat_mean is used for adding the cluster centroid
 ```
 
-The clustering plot shows that the groups are very close together, and overlap slightly. The clusters could be further apart with some tuning. 
-
-## Model
-
-```{r}
-
-```
-
-
-
+The clustering plot shows that the groups are very close together, and overlap slightly. The clusters could be further apart with some tuning by changing the number of clusters (k).
 
 
 ## Evaluation
 
+(https://towardsdatascience.com/clustering-analysis-in-r-using-k-means-73eca4fb7967)
+
+The within sum of squares (Withinss) is a value that represents the level of dissimilarity within a group. The higher the withinss,
+the greater the dissimilarity within the group.
+
+(Foncesca, 2019)
 ```{r}
+#To plot a within sum of squares plot for a range of different number of initial K-means centroids:
+
+#This function is from:  (https://towardsdatascience.com/clustering-analysis-in-r-using-k-means-73eca4fb7967)
+
+#data is the input dataset, nc is the maximum number of initial centres
+
+wssplot <- function(data, nc=25, seed=123){
+               wss <- (nrow(data)-1)*sum(apply(data,2,var))
+               for (i in 2:nc){
+                    set.seed(seed)
+                    wss[i] <- sum(kmeans(data, centers=i)$withinss)}
+                plot(1:nc, wss, type="b", xlab="Number of groups",
+                     ylab="Sum of squares within a group")}
+
+wssplot(data1[,(15:18)], nc = 20)
 
 ```
+
+From the Within sum of squares plot, there is a great increase in the value of the sum of squares within a group when the number of groups goes from 3 to 2. So when the number of groups decreases from 3 groups to 2 groups there is a great increase in dissimilarity 
+between observations within a group. 
+
+The main purpose is to find a number of initial groups which achieves some fair amount of compactness (or similarity) between observations within a group.
+
+
+We can try re-running the k-means model with the number of groups, k  = 4
+
+```{r}
+set.seed(123)
+clustering_results_4 <- kmeans(scale(data1[,(15:18)]), centers = 4, nstart = 25)
+clustering_results_4
+
+```
+The within cluster sum of squares by cluster value is now 53.0%. 
+
+We can try re-running the k-means model with the number of groups, k  = 7
+
+```{r}
+set.seed(123)
+clustering_results_7 <- kmeans(scale(data1[,(15:18)]), centers = 7, nstart = 25)
+clustering_results_7
+
+```
+Re-running k-means with k = 8:
+```{r}
+set.seed(123)
+clustering_results_8 <- kmeans(scale(data1[,(15:18)]), centers = 8, nstart = 25)
+clustering_results_8
+
+```
+The within cluster sum of squares by cluster value is 73.1% for k= 8, which is not very different from the Within cluster sum of square by cluster value for k = 7 (70.2%).
+
+
+Let's plot the K-means clusters
+
+```{r}
+library(RColorBrewer)
+fviz_cluster(clustering_results_8, data = data1[,(15:18)],
+             palette = brewer.pal(n = 8, name = "Dark2"), 
+             geom = "point",
+             ellipse.type = "convex", 
+             ggtheme = theme_bw()
+             )
+```
+There are still some overlaps between cluster groups.
+
+
+
+Compute PCA and extract individual components and extract individual components.
+
+```{r}
+# Dimension reduction using PCA
+results_pca_8 <- prcomp(data1[,(15:18)],  scale = TRUE)
+
+# Coordinates of individuals
+ind.coord <- as.data.frame(get_pca_ind(results_pca_8)$coord)
+
+# Add clusters obtained using the K-means algorithm
+ind.coord$cluster <- factor(clustering_results_8$cluster)
+
+# Add Region groups from the original data sett
+ind.coord$Region <- data1$Region
+
+#look at the first few rows to double check
+head(ind.coord)
+```
+
+```{r}
+# Percentage of variance explained by dimensions
+eigenvalue <- round(get_eigenvalue(results_pca_8), 1)
+variance.percent <- eigenvalue$variance.percent
+head(eigenvalue)
+```
+
+```{r}
+ggscatter(
+  ind.coord, x = "Dim.1", y = "Dim.2", 
+  color = "cluster", palette = brewer.pal(n = 8, name = "Dark2"), ellipse = TRUE, ellipse.type = "convex",   #add concentration ellipses
+  shape = "Region", size = 1.5,  legend = "right", ggtheme = theme_bw(),                #change point shapes depending on Region values
+  xlab = paste0("Dim 1 (", variance.percent[1], "% )" ),
+  ylab = paste0("Dim 2 (", variance.percent[2], "% )" )
+) +
+  stat_mean(aes(color = cluster), size = 4)      #add cluster centroid using stat_mean()
+
+```
+
 
 
 ## Deployment
@@ -659,3 +778,7 @@ The clustering plot shows that the groups are very close together, and overlap s
 https://www.datanovia.com/en/blog/k-means-clustering-visualization-in-r-step-by-step-guide/
 
 https://www.tidymodels.org/learn/statistics/k-means/
+
+https://towardsdatascience.com/clustering-analysis-in-r-using-k-means-73eca4fb7967
+
+https://towardsdatascience.com/clustering-evaluation-strategies-98a4006fcfc
