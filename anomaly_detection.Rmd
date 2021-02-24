@@ -41,6 +41,8 @@ library(ggplot2)
 library(anomalize)
 library(lemon)
 library(DMwR)
+#library(CORElearn)
+library(outForest)
 
 
 
@@ -135,6 +137,7 @@ ggplot(data=superstore)+
   coord_cartesian(ylim = c(0, 100))+labs(title=" Sales Distribution")
 
 ```
+
 ### Discount
 
 
@@ -144,7 +147,8 @@ ggplot(data=superstore)+
   geom_histogram(mapping=aes(x=discount),fill="cyan3")+
   labs(title=" Discount Distribution")
 ```
-### Sales Profit
+
+### Sales Profit 
 
 
 ```{r}
@@ -155,6 +159,8 @@ ggplot(data = superstore) +
   
 
 ```
+
+
 ### Profit Discount
 
 
@@ -165,6 +171,7 @@ ggplot(data = superstore) +
   labs(title=" Profit Discount Distribution")
 
 ```
+
 ### Sales by Year
 
 ```{r}
@@ -173,7 +180,7 @@ ggplot(data=superstore,aes(x = order_date, y =sales_amt)) +
       labs(title=" Sales by Year")
 ```
 
-###  Total Sales by Year
+### Total Sales by Year
 
 ```{r}
 
@@ -282,6 +289,8 @@ superstore_sales<-as_tibble(superstore_sales)
 
 ### Local Outlier Factor Algorithm  -Nearest neighbour method 
 
+LOF uses density based methods to calculate degree of outlying.LOF is a unsupervised anomaly detection technique, evry point in the datase is assigned LOF score based on the threshold value it classify the datapoints as outlier or non-outlier.
+
 ```{r}
 
 
@@ -295,22 +304,38 @@ superstore_lof<-superstore_unq[,c("sales_amt","profit_amt","quantity","discount"
 
 
  # for k=10
- outlier.scores <- lofactor(superstore_lof, k=10)
- plot(density(outlier.scores))
+ lof_scores <- lofactor(superstore_lof, k=10)
+ plot(density(lof_scores))
 ```
-## Manual Evaluation
+
+### Manual Evaluation
 
 ```{r}
 
  #top 5 outliers transactons
- outliers <- order(outlier.scores, decreasing=T)[1:5]
- print(outliers)
+ lof_outliers <- order(lof_scores >2, decreasing=T)[1:13]
+ superstore_unq[lof_outliers,]
+
  
+```
+
+
+```{r}
+
+#new column for outlier status
+
+outlier_orderid<-superstore_unq[which(lof_scores >2),1]
+vec<-as.vector(outlier_orderid$orderid)
+
  
- #dataframe for outliers
- superstore_unq[c(2452,665,6269,7555,5613),]
+superstore_unq<-mutate(superstore_unq,outlier_status=ifelse(orderid %in% (vec) ,"Yes","No"))
+
+x<-subset(superstore_unq,superstore_unq$outlier_status=="Yes")
+x
 
 ```
+
+
 
 
 ## Plot LOF outliers
@@ -319,16 +344,10 @@ superstore_lof<-superstore_unq[,c("sales_amt","profit_amt","quantity","discount"
 
 
 pch <- rep(".", 7000)
-pch[outliers] <- "+"
+pch[lof_outliers] <- "+"
 col <- rep("black",7000)
-col[outliers] <- "red"
+col[lof_outliers] <- "red"
 pairs(superstore_lof, pch=pch, col=col)
-
-```
-### Cluster Based Local Outlier Factor 
-
-```{r}
-
 
 ```
 
@@ -336,12 +355,39 @@ pairs(superstore_lof, pch=pch, col=col)
 
 ## Random Forest Algorithm 
 
+outForest is a random forest based implementation of the method. Each numeric variable is regressed onto all other variables using a random forest. If the scaled absolute difference between observed value and out-of-bag prediction is suspiciouly large (e.g. more than three times the RMSE of the out-of-bag predictions), then a value is considered an outlier. After identification of outliers, they can be replaced e.g. by predictive mean matching from the non-outliers.
+
+```{r}
+#dataframe for outforest
+superstore_out<-superstore_unq[,c("sales_amt","profit_amt","quantity","discount")]
+
+#fit outforest
+outforest_outlier<-outForest(superstore_out)
+
+```
+### Manual Evaluation 
+
+Observed same set of top outliers as LOF algorithm
+
 ```{r}
 
+#outlier rows, observed values, predicted and RMSE
+head(outliers(outforest_outlier),13)
 
+```
+
+
+```{r}
+
+# Outliers per variable
+plot(outforest_outlier)
 
 
 ```
+
+
+
+
 
 
 ## Responsible ML Framework
