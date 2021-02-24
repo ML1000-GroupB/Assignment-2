@@ -40,7 +40,8 @@ library(dplyr)
 library(ggplot2)
 library(anomalize)
 library(lemon)
-library(ggsci)
+library(DMwR)
+
 
 
 ```
@@ -60,7 +61,7 @@ str(superstore)
 
 ## Data Understanding
 
-US Superstore dataset is sourced from [US uperstore dataset](https://www.kaggle.com/juhi1994/superstore) . The dataset have online orders for  Superstores in U.S. from 2014-2018. Tableau community is the owner of the dataset. The dataset has 9994 records and 21 attributes.
+US Superstore dataset is sourced from [US superstore dataset](https://www.kaggle.com/juhi1994/superstore) . The dataset have online orders for  Superstores in U.S. from 2014-2018. Tableau community is the owner of the dataset. The dataset has 9994 records and 21 attributes.
 
 
 
@@ -164,6 +165,48 @@ ggplot(data = superstore) +
   labs(title=" Profit Discount Distribution")
 
 ```
+### Sales by Year
+
+```{r}
+ggplot(data=superstore,aes(x = order_date, y =sales_amt)) +
+      geom_point(color = "darkorchid3") +
+      labs(title=" Sales by Year")
+```
+
+###  Total Sales by Year
+
+```{r}
+
+
+sales_year<-aggregate(superstore$sales_amt,by=list(year=format(superstore$order_date, "%Y")),FUN=sum)
+names(sales_year)<-c("order_year","sales_total")
+
+
+
+ggplot(data=sales_year,aes(x = order_year, y =sales_total)) +
+      geom_bar(stat="identity",fill = "orange3") +
+      labs(title=" Total Sales by Year")
+
+
+
+```
+
+
+### Profit by Year
+
+```{r}
+
+profit_year<-aggregate(superstore$profit_amt,by=list(year=format(superstore$order_date, "%Y")),FUN=sum)
+names(profit_year)<-c("order_year","profit_total")
+
+
+ggplot(data=profit_year,aes(x = order_year, y =profit_total)) +
+      geom_bar(stat="identity",fill = "pink3") +
+      labs(title=" Total Profit by Year")
+
+
+
+```
 
 
 
@@ -235,38 +278,68 @@ superstore_sales<-as_tibble(superstore_sales)
 ```
 
 
-
-```{r}
-
-```
-
-
-
-## Test & Train dataset
-
-
-```{r}
-
-```
-
-
 ## Model
 
+### Local Outlier Factor Algorithm  -Nearest neighbour method 
+
 ```{r}
+
+
+
+#remove duplicates rows 
+superstore_unq<-superstore[!duplicated(superstore[c("sales_amt","profit_amt","quantity","discount")]),]
+
+#select numerical variables
+superstore_lof<-superstore_unq[,c("sales_amt","profit_amt","quantity","discount")]
+
+
+
+ # for k=10
+ outlier.scores <- lofactor(superstore_lof, k=10)
+ plot(density(outlier.scores))
+```
+## Manual Evaluation
+
+```{r}
+
+ #top 5 outliers transactons
+ outliers <- order(outlier.scores, decreasing=T)[1:5]
+ print(outliers)
+ 
+ 
+ #dataframe for outliers
+ superstore_unq[c(2452,665,6269,7555,5613),]
 
 ```
 
 
-## Evaluation
+## Plot LOF outliers
 
 ```{r}
+
+
+pch <- rep(".", 7000)
+pch[outliers] <- "+"
+col <- rep("black",7000)
+col[outliers] <- "red"
+pairs(superstore_lof, pch=pch, col=col)
+
+```
+### Cluster Based Local Outlier Factor 
+
+```{r}
+
 
 ```
 
 
-## Deployment
+
+## Random Forest Algorithm 
 
 ```{r}
+
+
+
 
 ```
 
