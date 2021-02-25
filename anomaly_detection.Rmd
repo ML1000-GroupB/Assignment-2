@@ -43,6 +43,7 @@ library(lemon)
 library(DMwR)
 #library(CORElearn)
 library(outForest)
+library(factoextra)
 
 
 
@@ -382,6 +383,67 @@ head(outliers(outforest_outlier),13)
 # Outliers per variable
 plot(outforest_outlier)
 
+
+```
+
+### K Means Clustering
+
+
+
+```{r}
+
+#find k value for clusters
+
+
+superstore_kmean<-superstore_unq[,c("sales_amt","profit_amt","quantity","discount")]
+
+
+# Elbow method
+fviz_nbclust(scale(superstore_kmean), kmeans, method = c("wss"))+
+  geom_vline(xintercept = 4, linetype = 2)+
+  labs(subtitle = "Elbow method")
+
+
+```
+```{r}
+#Silhouette method
+
+fviz_nbclust(scale(superstore_kmean), kmeans, method = "silhouette")+
+  labs(subtitle = "Silhouette method")
+
+```
+
+
+
+```{r}
+
+fviz_nbclust(scale(superstore_kmean), kmeans, nstart = 25,  method = "gap_stat", nboot = 50)+
+  labs(subtitle = "Gap statistic method")
+
+```
+
+
+
+```{r}
+
+# clusters for k=3
+
+km_clus<-kmeans(scale(superstore_kmean),3,nstart=25)
+
+#Plot clusters
+fviz_cluster(km_clus, data = superstore_kmean,palette = "jco",ggtheme = theme_minimal())
+
+```
+
+
+
+```{r}
+# clusters for k=4
+
+km_clus<-kmeans(scale(superstore_kmean),4,nstart = 25)
+
+#Plot clusters
+fviz_cluster(km_clus, data = superstore_kmean,palette = "jco",ggtheme = theme_minimal())
 
 ```
 
