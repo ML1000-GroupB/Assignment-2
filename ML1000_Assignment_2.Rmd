@@ -44,7 +44,7 @@ Anomaly detection or Outlier detection identifies data points, events or observa
 
 
 ## Objective
-Detect point anomalies from superstore dataset using K-NN and clustering methods
+Detect point anomalies from superstore dataset using K-NN and clustering methods. 
 
 ## Data Understanding
 
@@ -69,7 +69,8 @@ library(corrplot)   #for correlation matrix
 library(Hmisc)      #for matrix of correlations and P-values
 library(ggpubr)     #for making plots
 library(factoextra) #for extracting and visualising results of multivariate data analyses 
-
+library(cluster)
+library(Rtsne)
 ```
 ```{r}
 superstore<- read_excel("US_Superstore_data.xls")
@@ -550,7 +551,7 @@ head(data1)
 
 
 
-For this K-means clustering we will use the numeric variables only: which are sales, quantity, discount, profit, diff_in_days (columns 15 - 19). 
+For this K-means clustering we will use the numeric variables only: which are sales, quantity, discount, profit (columns 15 - 18). 
 K means clustering is affected by the starting assignment points, so we will try with 25 different starting assignments (nstart = 25), and see which ones work the best.
 
 (https://www.datanovia.com/en/blog/k-means-clustering-visualization-in-r-step-by-step-guide/)
@@ -667,10 +668,11 @@ wssplot(data1[,(15:18)], nc = 20)
 
 ```
 
-From the Within sum of squares plot, there is a great increase in the value of the sum of squares within a group when the number of groups goes from 3 to 2. So when the number of groups decreases from 3 groups to 2 groups there is a great increase in dissimilarity 
-between observations within a group. 
+From the Within sum of squares plot, the optimal number of clusters is around 5. when the number of groups (k) initially increases 1 to 6, 
+the error measures (sum of squares within a group) starts to decrease. When the number of groups is 7 or 8, the error measure starts to flatten. 
 
-The main purpose is to find a number of initial groups which achieves some fair amount of compactness (or similarity) between observations within a group.
+The main purpose is to find a number of initial groups which achieves some fair amount of compactness (or similarity) between observations within a group. When k is too high, each cluster starts to represent individual points, whereas when k is too low, the observations may not 
+be in the right cluster. 
 
 
 We can try re-running the k-means model with the number of groups, k  = 4
@@ -681,7 +683,7 @@ clustering_results_4 <- kmeans(scale(data1[,(15:18)]), centers = 4, nstart = 25)
 clustering_results_4
 
 ```
-The within cluster sum of squares by cluster value is now 53.0%. 
+The within cluster sum of squares by cluster value is now 53.0%. This represents the compactness of the clustering, or how similar observations are to other observations within the same group. 
 
 We can try re-running the k-means model with the number of groups, k  = 7
 
@@ -754,13 +756,93 @@ ggscatter(
 
 ```
 
+# Clustering Validation
+
+
+(https://towardsdatascience.com/clustering-analysis-in-r-using-k-means-73eca4fb7967)
+
+
+Silhouette coefficient can be used to evaluate the goodness of the clustering. First, for each observation i, it calculates the dissimilarity
+between i and all the other points within the same cluster. This value is called average dissimilarity Di.
+
+Then calculate the dissimilarity between i and all the other clusters and get the lowest value among them. Find the dissimilarity between i 
+and the next closest cluster, called Ci.
+
+Next find the silhouette width which is the difference between Ci and Di, divided by the maximum difference between Ci and Di. 
+Si = (Ci - Di)/max(Di, Ci)
+
+Si>0 means the observation is well clustered. The closer it is to 1 the better it is clustered.
+
+Si <0 means the observation is wrongly clustered.
+
+Si = 0 means the observation is between 2 clusters. 
+
+
+```{r}
+library(cluster)
+library(factoextra)
+
+sil <- silhouette(clustering_results_8$cluster, dist(data1[,(15:18)]))
+fviz_silhouette(sil)
+```
+
+From the table, 5 of the 8 clusters have a negative silhouette width which means that some observations may
+be in the wrong cluster, so the clustering is not very good. 
+
+
+### Method 2: K-medoids
+
+
+Following this tutorial: https://towardsdatascience.com/clustering-on-mixed-type-data-8bbd0a2569c3
+
+K-means algorithm is limited in that it can only work with numerical data, whereas our dataset contains both numeric and categorical
+data.
+
+We will now try the PAM clustering algorithm (Partitioning across medoids).  K-medoids is more robust to outliers and noise than K-means. This algorithm uses Gower distance to measure the partial dissimilarity across individuals, and ranges in [0 1]. Standardization is first applied to the features, and the distance
+between individuals represents the average of all feature specific distances. 
+
+Partial dissimilarity is different depending on the type of variable: numeric or categorical. 
+
+Numeric features - partial dissimilarity is dependent on absolute difference between 2 observations (x_i and x_j), and the maximum
+range observed from all individuals. d_ij^f = |x_i - x_j|/|max_N(x) - min_N(x))| where N is the number of individuals in a dataset.
+
+Categorical/Qualitative features - feature dissimilarity is equal to 1 if y_i and y_j do not have the same values, otherwise it is 0.
+
+
+One method to determine the number of clusters is by using the Silhouette coefficient. 
+
+### Data Preparation 
+
+For this K-medoids analysis we will omit the Region variable because there are only 4 values and the information is too broad.
+
+We will try to cluster transactions according to the following features: 
+
+```{r}
+data2 <- data1 %>% 
+              select(Ship_Mode, Segment, City, State, Sub_Category, diff_in_days, Sales, Quantity, Discount, Profit)
+
+#convert all character data type to factor:
+data2[sapply(data2, is.character)] <- lapply(data2[sapply(data2, is.character)], 
+                                       as.factor)
+```
+
+Compute Gower distance 
+```{r}
+gower_dist <- daisy(data2, metric = "gower")
+
+gower_mat <- as.matrix(gower_dist)
+```
+
+```{r}
+#Print most similar transactions
+data2[which(gower_mat == min(gower_mat[gower_mat != min(gower_mat)]), arr.ind = TRUE)[1, ], ]
+```
+
+
 
 
 ## Deployment
 
-```{r}
-
-```
 
 
 ## Responsible ML Framework
@@ -782,3 +864,5 @@ https://www.tidymodels.org/learn/statistics/k-means/
 https://towardsdatascience.com/clustering-analysis-in-r-using-k-means-73eca4fb7967
 
 https://towardsdatascience.com/clustering-evaluation-strategies-98a4006fcfc
+
+https://www.analyticsvidhya.com/blog/2020/12/a-case-study-to-detect-anomalies-in-time-series-using-anomalize-package-in-r/
