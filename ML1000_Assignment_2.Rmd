@@ -838,7 +838,125 @@ gower_mat <- as.matrix(gower_dist)
 data2[which(gower_mat == min(gower_mat[gower_mat != min(gower_mat)]), arr.ind = TRUE)[1, ], ]
 ```
 
+```{r}
+#Print most dissimilar transactions
+data2[which(gower_mat == max(gower_mat[gower_mat != max(gower_mat)]), arr.ind = TRUE)[1, ], ]
 
+```
+
+Try to figure out the number of clusters to use by using the silhouette coefficient. Typically the number of clusters used is between 2 and 8. 
+
+```{r}
+sil_width <- c(NA)
+for (i in 2:8){
+  pam_fit <- pam(gower_dist, diss = TRUE, k = i )
+  sil_width[i] <- pam_fit$silinfo$avg.width
+}
+
+plot(1:8, sil_width,
+     xlab = "Number of clusters",
+     ylab = "Silhouette Width")
+lines(1:8, sil_width)
+```
+2 clusters has the highest silhouette width, while 4 has the second highest. 2 Clusters may be too simple, so We will pick k = 4.
+
+To look at a summary of each of the clusters:
+
+```{r}
+k <- 4
+pam_fit <- pam(gower_dist, diss = TRUE, k)
+pam_results <- data2 %>%
+  mutate(cluster = pam_fit$clustering) %>%
+  group_by(cluster) %>%
+  do(the_summary = summary(.))
+pam_results$the_summary
+```
+The first cluster has the majority values: ship mode is Second Class , segment is Consumer , City is San Francisco/other, State is California/other, sub category is furnishings. The mean difference in days between order date and ship date is 2.358 days, the mean value for Sales is $216.38, the mean quantity is 3.699, the discount mean is $0.1113, profit mean is $32.
+
+cluster 1 is made of second class shippping, Consumer segment x San Franciso x California x furnishings. 
+
+
+For cluster 2, the ship mode is mostly standard class, segment is mostly consumer, city is mostly Los Angeles/other, State is mostly California/Other, subcategory is mostly Binders/other. The mean difference in days between order date and ship date is 4.7 days, the mean sales $225.91, mean quantity is 3.48, discount is 0.2148, and profit mean is $19.67.
+
+Cluster 2 is made of standard class shipping x consumer segment x Los Angeles x California x Binders. 
+
+For cluster 3, the main ship mode is First class, the segment is mostly Home Office, the most common city is Philadelphia/Other, the most common State is Pennsylvania/Other,  and the most common subcategory is paper/other. For numeric variables, the mean difference in days between order date and ship date is 4.04 days, the mean sales $216.94, mean quantity is 3.72, mean discount is 0.2065, and mean profit is $10.08. 
+
+Cluster 3 is First class shipping x Home Office segment x Philadelphia x Pennsylvania x Paper. Cluster 3 has the lowest mean profit of the 4 clusters. 
+
+For cluster 4, the main ship mode is First class, the most common segment is Corporate, New York City/Other is the most common city, New York State/Other is the most common state, and the most common subcategory is paper. For the numeric features, the mean difference in days between order date and ship date is 4.25 days, the mean sales is $253.84, and mean quantity is 3.83, mean discount is 0.086, mean profit is $49.05.
+
+Cluster 4 is made of First Class shipping x Corporate segment x New York City x New York State x Paper. Cluster 4 has the highest mean sales amount and mean profit, with lowest mean discount. 
+
+
+We can now visualise the clusters in lower dimensional space with tSNE (t-Distributed Stochastic Neighbor Embedding) which can be used for dimensionality reduction.
+
+
+
+```{r, fig.height=8, fig.width=6}
+tsne_obj <- Rtsne(gower_dist, is_distance = TRUE)
+
+tsne_data <- tsne_obj$Y %>%
+  data.frame() %>%
+  setNames(c("X", "Y")) %>%
+  mutate(cluster = factor(pam_fit$clustering))
+
+ggplot(aes(x = X, y = Y), data = tsne_data) +
+  geom_point(aes(color = cluster))
+```
+
+
+```{r}
+input_data <- data2
+
+```
+
+
+Let's try using k=3:
+```{r}
+gower_dist = daisy(input_data, metric = "gower", type = list(logratio = 3))
+                  gower_mat = as.matrix(gower_dist)
+                  pam_fit = pam(gower_mat, k=3, diss=TRUE)
+```
+
+
+```{r}
+#summary(pam_fit)
+
+```
+
+to prevent printing out too many pages below, only some information from the summary of pam fit for k=3 will be included:
+
+Medoids:
+     ID           
+[1,] "399"  "399" 
+[2,] "9"    "9"   
+[3,] "7119" "7119"
+
+Numerical information per cluster:
+     size  max_diss   av_diss  diameter separation
+[1,] 2361 0.6204122 0.3754422 0.7803200 0.01490751
+[2,] 4281 0.6045552 0.3173436 0.8092413 0.01524512
+[3,] 3352 0.5882532 0.3311972 0.8127438 0.01490751
+
+Isolated clusters:
+ L-clusters: character(0)
+ L*-clusters: character(0)
+
+Average silhouette width per cluster:
+[1] 0.06840880 0.09434220 0.06023282
+Average silhouette width of total data set:
+[1] 0.07677532
+
+Available components:
+[1] "medoids"    "id.med"     "clustering" "objective"  "isolation"  "clusinfo"   "silinfo"    "diss"       "call"      
+
+
+
+## Evaluating the consistency within Clusters of Data
+Silhouette coefficient can be used to compare the average distance to observations within the same cluster, to the average distance to observations in other clusters. 
+
+High silhouette coefficient means that the observation is well clustered, while a low silhouette coefficient may indicate outliers.
 
 
 ## Deployment
@@ -866,3 +984,5 @@ https://towardsdatascience.com/clustering-analysis-in-r-using-k-means-73eca4fb79
 https://towardsdatascience.com/clustering-evaluation-strategies-98a4006fcfc
 
 https://www.analyticsvidhya.com/blog/2020/12/a-case-study-to-detect-anomalies-in-time-series-using-anomalize-package-in-r/
+
+https://www.datanovia.com/en/lessons/k-medoids-in-r-algorithm-and-practical-examples/
