@@ -22,6 +22,9 @@ ui <- fluidPage(
       radioButtons (inputId = "stringsAsFactors", label = "Do you want strings to be treated as Factors?",
                     choices = c("Yes" = "TRUE", "No" = "FALSE")),
       
+      numericInput(inputId =  "k", label="How many clusters do you want?",
+                   value=3),
+      
       checkboxGroupInput(inputId =  "columns", label="Which columns do you want to use for clustering?", 
                          choices = c("1"=1, "2"=2,"3"=3,"4"=4,"5"=5,"6"=6,
                                      "7"=7,"8"=8,"9"=9,"10"=10,"11"=11,
@@ -40,10 +43,10 @@ ui <- fluidPage(
     
     mainPanel(
       tabsetPanel(
-      tabPanel("Plots for your data",
+      tabPanel("Plots for your data by clusters",
         plotOutput("plot1")
        ),
-      tabPanel("Plots on PCA",
+      tabPanel("Visualization of FAMD (Factor Analysis of Mixed Data)",
       plotOutput("plot2")
       )
     )
