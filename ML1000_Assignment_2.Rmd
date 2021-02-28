@@ -77,6 +77,7 @@ library(lubridate)
 library(fpc)
 library(FactoMineR)
 library(NbClust)
+library(RColorBrewer)
 ```
 ```{r}
 superstore<- read_excel("US_Superstore_data.xls")
@@ -560,30 +561,48 @@ head(data1)
 For this K-means clustering we will use the numeric variables only: which are sales, quantity, discount, profit (columns 15 - 18). 
 K means clustering is affected by the starting assignment points, so we will try with 25 different starting assignments (nstart = 25), and see which ones work the best.
 
-(https://www.datanovia.com/en/blog/k-means-clustering-visualization-in-r-step-by-step-guide/)
 
-```{r}
+
+```{r, echo= FALSE, message=FALSE, warning = FALSE}
 #Compute K-means clustering with k=3 (3 initial distinct cluster centres)
 set.seed(123)
 
 results_kmeans <- kmeans(scale(data1[,(15:18)]), 3, nstart =25)
                          
 #kmeans clusters to show the group of the individuals
-results_kmeans$cluster
+#results_kmeans$cluster
 ```
 
 ```{r}
 summary(results_kmeans)
 
 ```
-```{r}
-results_kmeans
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#results_kmeans  #this is commented out to prevent long print out
+
 # https://towardsdatascience.com/clustering-analysis-in-r-using-k-means-73eca4fb7967
 
 #cluster means are the centroid vectors
 #clustering vector is the group that the observation is placed into
 #percentage indicates compactness of the clustering or how similar observations are within the same group
 ```
+
+K-means clustering with 3 clusters of sizes 1136, 8831, 27
+
+Cluster means:
+        Sales     Quantity   Discount     Profit
+1 -0.05714414  0.045908572  2.3730228 -0.5928228
+2 -0.02922217 -0.007823215 -0.3039892  0.0425665
+3 11.96210167  0.627210176 -0.4157497 11.0200717
+
+Within cluster sum of squares by cluster:
+[1]  5207.851 16648.669  3315.203
+ (between_SS / total_SS =  37.0 %)
+
+Available components:
+
+[1] "cluster"      "centers"      "totss"        "withinss"     "tot.withinss" "betweenss"    "size"         "iter"        
+[9] "ifault"      
 
 The results of this clustering indicate that the within cluster sum of squares by cluster is 37.0 % which means that the observations
 within a given group are not very similar to each other. 
@@ -683,58 +702,41 @@ be in the right cluster.
 
 We can try re-running the k-means model with the number of groups, k  = 4
 
-```{r}
+```{r, message=FALSE, warnings=FALSE, echo=FALSE}
 set.seed(123)
 clustering_results_4 <- kmeans(scale(data1[,(15:18)]), centers = 4, nstart = 25)
-clustering_results_4
+#clustering_results_4
 
 ```
+K-means clustering with 4 clusters of sizes 27, 1044, 2838, 6085
+
+Cluster means:
+       Sales    Quantity   Discount      Profit
+1 11.9621017  0.62721018 -0.4157497 11.02007172
+2 -0.1222964  0.02095769  2.4788189 -0.58466503
+3  0.2856822  1.19688927 -0.2981228  0.17558930
+4 -0.1653353 -0.56459922 -0.2844025 -0.03048054
+
+Within cluster sum of squares by cluster:
+[1] 3315.203 4284.643 7571.058 3614.724
+ (between_SS / total_SS =  53.0 %)
+
+Available components:
+
+[1] "cluster"      "centers"      "totss"        "withinss"     "tot.withinss" "betweenss"    "size"         "iter"        
+[9] "ifault"  
+
 The within cluster sum of squares by cluster value is now 53.0%. This represents the compactness of the clustering, or how similar observations are to other observations within the same group. 
-
-We can try re-running the k-means model with the number of groups, k  = 7
-
-```{r}
-set.seed(123)
-clustering_results_7 <- kmeans(scale(data1[,(15:18)]), centers = 7, nstart = 25)
-clustering_results_7
-
-```
-Re-running k-means with k = 8:
-```{r}
-set.seed(123)
-clustering_results_8 <- kmeans(scale(data1[,(15:18)]), centers = 8, nstart = 25)
-clustering_results_8
-
-```
-The within cluster sum of squares by cluster value is 73.1% for k= 8, which is not very different from the Within cluster sum of square by cluster value for k = 7 (70.2%).
-
-
-Let's plot the K-means clusters
-
-```{r}
-library(RColorBrewer)
-fviz_cluster(clustering_results_8, data = data1[,(15:18)],
-             palette = brewer.pal(n = 8, name = "Dark2"), 
-             geom = "point",
-             ellipse.type = "convex", 
-             ggtheme = theme_bw()
-             )
-```
-There are still some overlaps between cluster groups.
-
-
-
-Compute PCA and extract individual components and extract individual components.
 
 ```{r}
 # Dimension reduction using PCA
-results_pca_8 <- prcomp(data1[,(15:18)],  scale = TRUE)
+results_pca_4 <- prcomp(data1[,(15:18)],  scale = TRUE)
 
 # Coordinates of individuals
-ind.coord <- as.data.frame(get_pca_ind(results_pca_8)$coord)
+ind.coord <- as.data.frame(get_pca_ind(results_pca_4)$coord)
 
 # Add clusters obtained using the K-means algorithm
-ind.coord$cluster <- factor(clustering_results_8$cluster)
+ind.coord$cluster <- factor(clustering_results_4$cluster)
 
 # Add Region groups from the original data sett
 ind.coord$Region <- data1$Region
@@ -745,7 +747,7 @@ head(ind.coord)
 
 ```{r}
 # Percentage of variance explained by dimensions
-eigenvalue <- round(get_eigenvalue(results_pca_8), 1)
+eigenvalue <- round(get_eigenvalue(results_pca_4), 1)
 variance.percent <- eigenvalue$variance.percent
 head(eigenvalue)
 ```
@@ -783,17 +785,51 @@ Si <0 means the observation is wrongly clustered.
 
 Si = 0 means the observation is between 2 clusters. 
 
-
 ```{r}
 library(cluster)
 library(factoextra)
 
-sil <- silhouette(clustering_results_8$cluster, dist(data1[,(15:18)]))
+sil <- silhouette(clustering_results_4$cluster, dist(data1[,(15:18)]))
 fviz_silhouette(sil)
 ```
 
-From the table, 5 of the 8 clusters have a negative silhouette width which means that some observations may
-be in the wrong cluster, so the clustering is not very good. 
+We can try re-running the k-means model with the number of groups, k  = 7
+
+```{r}
+set.seed(123)
+clustering_results_7 <- kmeans(scale(data1[,(15:18)]), centers = 7, nstart = 25)
+#clustering_results_7
+
+```
+K-means clustering with 7 clusters of sizes 3317, 200, 12, 914, 2574, 9, 2968
+
+Cluster means:
+        Sales    Quantity   Discount       Profit
+1 -0.17099202 -0.55401551 -0.7476979   0.01999970
+2  3.70037129  1.13047292 -0.4332859   2.62598142
+3  8.36049519  1.14320638  2.0689103 -11.91366497
+4 -0.21824012  0.05129912  2.6451425  -0.46197164
+5  0.04223395  1.22666437 -0.2946436   0.03793345
+6 16.87915324  0.84359568 -0.6489669  19.79865024
+7 -0.11265862 -0.54381990  0.2993725  -0.10180518
+
+Within cluster sum of squares by cluster:
+[1] 1131.9138 1960.3599 1460.2766 1749.2333 3515.6513  778.7336 1329.8103
+ (between_SS / total_SS =  70.2 %)
+
+Available components:
+
+[1] "cluster"      "centers"      "totss"        "withinss"     "tot.withinss" "betweenss"    "size"         "iter"        
+[9] "ifault"    
+
+
+We also re-ran kmeans with k=8, 
+Re-running k-means with k = 8:
+
+The within cluster sum of squares by cluster value is 73.1% for k= 8, which is not very different from the Within cluster sum of square by cluster value for k = 7 (70.2%).
+
+Compute PCA and extract individual components and extract individual components.
+
 
 
 ### Local Outlier Factor Algorithm  -Nearest neighbour method 
@@ -910,7 +946,7 @@ results_kmeans <- kmeans(normal_transactions_scaled, centers = 3, nstart =25)
                          
 #kmeans clusters to show the group of the individuals
 
-results_kmeans$cluster
+#results_kmeans$cluster
 ```
 
 Using the Elbow method to determine the optimal number of clusters involves plotting the within cluster sum of squares. The optimal number of clusters is the one located at the "bend" on the graph, where WSS is lowered.
@@ -948,9 +984,28 @@ fviz_cluster(results_kmeans, data = normal_transactions_scaled,
              ggtheme = theme_bw()
              )
 ```
+To see the kmeans results:
 ```{r}
-results_kmeans
+#results_kmeans
+
+#the clustering vector information has been omitted for brevity.
 ```
+K-means clustering with 3 clusters of sizes 131, 6484, 1022
+
+Cluster means:
+        Sales    Quantity   Discount        Profit
+1  5.29934595  1.04564847 -0.4747453  4.5131872279
+2 -0.08504992 -0.01836038 -0.3350941  0.0001464245
+3 -0.13967774 -0.01754527  2.1868313 -0.5794294944
+
+[1]  4677.307 10427.565  2891.185
+ (between_SS / total_SS =  41.1 %)
+
+Available components:
+
+[1] "cluster"      "centers"      "totss"        "withinss"     "tot.withinss" "betweenss"    "size"         "iter"        
+[9] "ifault"      
+
 The within cluster sum of squares by cluster is 41.1% for k = 3. 
 
 
@@ -962,8 +1017,27 @@ results_kmeans_4 <- kmeans(normal_transactions_scaled, centers = 4, nstart =25)
                          
 #kmeans clusters to show the group of the individuals
 
-results_kmeans_4
+#results_kmeans_4
 ```
+K-means clustering with 4 clusters of sizes 1741, 4917, 941, 38
+
+Cluster means:
+       Sales    Quantity   Discount     Profit
+1  0.4660012  1.36028979 -0.3218513  0.2382839
+2 -0.1953987 -0.47692843 -0.3185796 -0.0499454
+3 -0.1892876 -0.04414503  2.2823862 -0.5695165
+4  8.6207116  0.48244836 -0.5506917  9.6485345
+
+Within cluster sum of squares by cluster:
+[1] 5391.896 3363.327 2252.744 2215.088
+ (between_SS / total_SS =  56.7 %)
+
+Available components:
+
+[1] "cluster"      "centers"      "totss"        "withinss"     "tot.withinss" "betweenss"    "size"         "iter"        
+[9] "ifault"      
+
+
 The within sum of squares by cluster is 56.7%.
 
 
@@ -1303,4 +1377,4 @@ https://www.datanovia.com/en/lessons/k-medoids-in-r-algorithm-and-practical-exam
 
 https://www.rdocumentation.org/packages/dbscan/versions/1.1-5/topics/lof
 
-https://towardsdatascience.com/10-tips-for-choosing-the-optimal-number-of-clusters-277e93d72d92
+https://towardsdatascience.com/10-tips-for-choosing-the-optimal-number-of-clusters-277e93d72d92f
