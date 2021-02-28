@@ -71,6 +71,12 @@ library(ggpubr)     #for making plots
 library(factoextra) #for extracting and visualising results of multivariate data analyses 
 library(cluster)
 library(Rtsne)
+library(DMwR)
+library(outForest)
+library(lubridate)
+library(fpc)
+library(FactoMineR)
+library(NbClust)
 ```
 ```{r}
 superstore<- read_excel("US_Superstore_data.xls")
@@ -790,6 +796,190 @@ From the table, 5 of the 8 clusters have a negative silhouette width which means
 be in the wrong cluster, so the clustering is not very good. 
 
 
+### Local Outlier Factor Algorithm  -Nearest neighbour method 
+
+LOF uses density based methods to calculate degree of outlying. LOF is a unsupervised anomaly detection technique, every point in the dataset is assigned LOF score based on the threshold value it classify the data points as outlier or non-outlier.
+
+Points which are much lower in density compared to its neighbours are considered outliers. 
+
+A LOF score of approximately 1 indicates that density around the point is comparable to its neighbors. Scores significantly larger than 1 indicate outliers (Hahsler).
+
+If there are more than k duplicate points in the data, then lof can become NaN caused by an infinite local density. In this case we set lof to 1
+ 
+```{r}
+
+#remove duplicates rows 
+superstore_unq<-data1[!duplicated(data1[c("Sales","Profit","Quantity","Discount")]),]
+
+#select numerical variables
+superstore_lof<-superstore_unq[,c("Sales","Profit","Quantity","Discount")]
+
+# for k=10, ,lof produces a vector of local outlier factor for each data point
+lof_scores <- lofactor(superstore_lof, k=10)
+plot(density(lof_scores))
+ 
+# distribution of outlier factors
+summary(lof_scores)
+hist(lof_scores, breaks=10)
+
+```
+
+
+### Manual Evaluation
+
+```{r}
+#top 5 outliers transactons , the greater the lof_scores the farther the point is from the cluster. Choosing values for score greater than 2
+ lof_outliers <- order(lof_scores>2, decreasing=T)[1:13]
+ superstore_unq[lof_outliers,]
+```
+
+
+```{r}
+#outliers for z-score >2(how far an observation is from the mean)
+
+outlier_orderid<-superstore_unq[which(lof_scores >2),1]
+vec<-as.vector(outlier_orderid)
+
+
+#new column for outlier status
+superstore_unq<-mutate(superstore_unq,outlier_status=ifelse(Order_ID %in% (vec) ,"Yes","No"))
+
+x<-subset(superstore_unq,superstore_unq$outlier_status=="Yes")
+x
+
+```
+
+Keeping just the normal transactions of the superstore dataset (which are not outliers):
+```{r}
+normal_transactions <-subset(superstore_unq,superstore_unq$outlier_status=="No")
+
+```
+
+Extract just the numeric columns from the normal transactions:
+```{r}
+normal_transactions_numeric <- normal_transactions %>% 
+                        select(Sales, Quantity, Discount, Profit)
+```
+
+First scale the data since the variables are measured in different scales:
+```{r}
+normal_transactions_scaled <- scale(normal_transactions_numeric)
+
+rownames(normal_transactions_scaled) <- normal_transactions_numeric$name     #reassign the rownames
+```
+
+Use PCA to scale the dimensions of the data:
+```{r}
+res.pca <- PCA(normal_transactions_scaled, graph = FALSE)
+
+#Visualize eigenvalues/variances
+fviz_screeplot(res.pca, addlabels = TRUE, ylim = c(0, 50))
+```
+Scree plot shows dimension 1 captures 44.8% of the variance while dimension 2 captures 25.4% of the variance.
+
+Extract the results for variables
+```{r}
+var <- get_pca_var(res.pca)
+```
+
+Contributions of variables to PC1
+```{r}
+fviz_contrib(res.pca, choice = "var", axis = 1, top = 10)
+```
+Contributions of variables to PC2
+```{r}
+fviz_contrib(res.pca, choice = "var", axes = 2, top = 10)
+```
+
+#Control variable colours using their contributions to the principal axis
+```{r}
+fviz_pca_var(res.pca, col.var = "contrib",
+             gradient.cols =c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE #prevent text overlapping
+             ) + theme_minimal() + ggtitle("Variables - PCA")
+```
+From the above visualization, sales and profit tend to increase together. Quantity also increases as sales and profits increase.
+Discount is inversely related to sales, profit and quantity.
+
+
+```{r, echo= FALSE, message=FALSE, warning= FALSE}
+#Compute K-means clustering with k=3 (3 initial distinct cluster centres) on just the normal transactions from the dataset. Nstart =25 means generate 25 initial configurations and find the average for all the centroids. 
+set.seed(123)
+
+results_kmeans <- kmeans(normal_transactions_scaled, centers = 3, nstart =25)
+                         
+#kmeans clusters to show the group of the individuals
+
+results_kmeans$cluster
+```
+
+Using the Elbow method to determine the optimal number of clusters involves plotting the within cluster sum of squares. The optimal number of clusters is the one located at the "bend" on the graph, where WSS is lowered.
+```{r}
+set.seed(123)
+
+#to compute the total within-cluster sum of squares:
+fviz_nbclust(normal_transactions_scaled, kmeans, method = "wss", k.max = 20) + 
+  theme_minimal() + ggtitle("The Elbow Method")
+```
+The optimal number of clusters looks to be k = 4. 
+
+Another method is to look at the silhouette method.
+```{r}
+fviz_nbclust(normal_transactions_scaled, kmeans, method = "silhouette", k.max = 24) + theme_minimal() + ggtitle("The Silhouette Plot")
+```
+The silhouette method suggests the optimal number of clusters is 2. 
+
+
+Another method is using NbClust which provides 30 indices for determining the relevant number of clusters. It looks at all combinations of clusters, distance measures, and clustering methods. 
+
+```{r}
+# res.nbclust <- NbClust(normal_transactions_scaled, distance = "euclidean",
+#                   min.nc = 2, max.nc = 9, 
+#                   method = "complete", index ="all")
+# factoextra::fviz_nbclust(res.nbclust) + theme_minimal() + ggtitle("NbClust's optimal number of clusters")
+```
+
+```{r}
+library(RColorBrewer)
+fviz_cluster(results_kmeans, data = normal_transactions_scaled,
+             palette = brewer.pal(n = 8, name = "Dark2"), 
+             geom = "point",
+             ellipse.type = "convex", 
+             ggtheme = theme_bw()
+             )
+```
+```{r}
+results_kmeans
+```
+The within cluster sum of squares by cluster is 41.1% for k = 3. 
+
+
+try clustering with kmeans using k = 4
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+set.seed(123)
+
+results_kmeans_4 <- kmeans(normal_transactions_scaled, centers = 4, nstart =25)
+                         
+#kmeans clusters to show the group of the individuals
+
+results_kmeans_4
+```
+The within sum of squares by cluster is 56.7%.
+
+
+Plotting the 4 kmeans clustering results
+```{r}
+library(RColorBrewer)
+fviz_cluster(results_kmeans_4, data = normal_transactions_scaled,
+             palette = brewer.pal(n = 8, name = "Dark2"), 
+             geom = "point",
+             ellipse.type = "convex", 
+             ggtheme = theme_bw()
+             )
+```
+
+
+
 ### Method 2: K-medoids
 
 
@@ -925,6 +1115,10 @@ Available components:
 [1] "medoids"    "id.med"     "clustering" "objective"  "isolation"  "clusinfo"   "silinfo"    "diss"       "call"   
 
 
+
+
+
+Plotting the kmedoids with k =4
 ```{r, fig.height=8, fig.width=6}
 tsne_obj <- Rtsne(gower_dist, is_distance = TRUE)
 
@@ -936,7 +1130,7 @@ tsne_data <- tsne_obj$Y %>%
 ggplot(aes(x = X, y = Y), data = tsne_data) +
   geom_point(aes(color = cluster))
 ```
-
+Clusters still look like they have some overlap, but cluster 1 is pretty well defined. 
 
 ```{r}
 input_data <- data2
@@ -979,7 +1173,10 @@ Average silhouette width of total data set:
 [1] 0.07677532
 
 Available components:
-[1] "medoids"    "id.med"     "clustering" "objective"  "isolation"  "clusinfo"   "silinfo"    "diss"       "call"      
+[1] "medoids"    "id.med"     "clustering" "objective"  "isolation"  "clusinfo"   "silinfo"    "diss"       "call"     
+
+
+The average silhouette width of the total data set is 0.0767753. 
 
 ```{r}
 pam_results_3 <- data2 %>%
@@ -1056,8 +1253,7 @@ Available components:
 [9] "call"     
 
 
-
-
+The average silhouette width of the total data set for k=5 is 0.08049662. 
 
 ```{r, fig.height=8, fig.width=6}
 tsne_obj <- Rtsne(gower_dist_5, is_distance = TRUE)
@@ -1104,3 +1300,7 @@ https://towardsdatascience.com/clustering-evaluation-strategies-98a4006fcfc
 https://www.analyticsvidhya.com/blog/2020/12/a-case-study-to-detect-anomalies-in-time-series-using-anomalize-package-in-r/
 
 https://www.datanovia.com/en/lessons/k-medoids-in-r-algorithm-and-practical-examples/
+
+https://www.rdocumentation.org/packages/dbscan/versions/1.1-5/topics/lof
+
+https://towardsdatascience.com/10-tips-for-choosing-the-optimal-number-of-clusters-277e93d72d92
