@@ -6,33 +6,6 @@ output:
   pdf_document: default
   html_document: default
 ---
-# To do list:  
-
-
-- **Add Pie charts! - by sub_category, region**  # (done)
-
-
-- **Create a Month variable - to see the change of sales/profits by month?**  
-
-
-- **bar charts of profits/sales by region**  #(done)
-
-
-- **Output the characteristics of the orders with the highest and lowest profits/sales - e.g. what made the order? when? bought what product? in which city/state/region? Any discount?**  
-
-
-- **relationship between discount & sales, discount & profits, sales & profits, and the role of region?**  
-
-
-- **from someone's analysis - there is no significant change between the four discount categories when it comes to Sales**  
-
-
-- **sales/profits by month, rather than by date? color by region?**  
-
-
-
-
-
 
 ## Abstract
 
@@ -64,13 +37,13 @@ library(anomalize)
 library(lemon)
 library(ggsci)
 library(tidyverse)
-library(ggplot2)
+library(ggplot2)    #for visualization
 library(corrplot)   #for correlation matrix
 library(Hmisc)      #for matrix of correlations and P-values
 library(ggpubr)     #for making plots
 library(factoextra) #for extracting and visualising results of multivariate data analyses 
 library(cluster)
-library(Rtsne)
+library(Rtsne)      #for t-SNE plot
 library(DMwR)
 library(outForest)
 library(lubridate)
@@ -78,8 +51,9 @@ library(fpc)
 library(FactoMineR)
 library(NbClust)
 library(RColorBrewer)
+library(ggfortify)
 ```
-```{r}
+```{r, echo= FALSE, message = FALSE, warning = FALSE}
 superstore<- read_excel("US_Superstore_data.xls")
 ```
 ```{r include=FALSE}
@@ -558,7 +532,7 @@ head(data1)
 
 
 
-For this K-means clustering we will use the numeric variables only: which are sales, quantity, discount, profit (columns 15 - 18). 
+For this K-means clustering we will use the numeric variables only: which are sales, quantity, discount, profit (columns 15 - 18). K means clustering is partitional, exclusive and complete type of clustering approach, meaning the clustering is independent, (not nested within each other), and every observation has to be placed inside a cluster (Nwanganga and Chapple, 2020).
 K means clustering is affected by the starting assignment points, so we will try with 25 different starting assignments (nstart = 25), and see which ones work the best.
 
 
@@ -670,11 +644,10 @@ The clustering plot shows that the groups are very close together, and overlap s
 
 (https://towardsdatascience.com/clustering-analysis-in-r-using-k-means-73eca4fb7967)
 
-The within sum of squares (Withinss) is a value that represents the level of dissimilarity within a group. The higher the withinss,
-the greater the dissimilarity within the group.
+The within sum of squares (Withinss) is a value that represents the level of dissimilarity within a group. The higher the withinss, the greater the dissimilarity within the group.
 
 (Foncesca, 2019)
-```{r}
+```{r, warning = FALSE}
 #To plot a within sum of squares plot for a range of different number of initial K-means centroids:
 
 #This function is from:  (https://towardsdatascience.com/clustering-analysis-in-r-using-k-means-73eca4fb7967)
@@ -881,7 +854,7 @@ vec<-as.vector(outlier_orderid)
 superstore_unq<-mutate(superstore_unq,outlier_status=ifelse(Order_ID %in% (vec) ,"Yes","No"))
 
 x<-subset(superstore_unq,superstore_unq$outlier_status=="Yes")
-x
+head(x, 10)          #look at top 10 rows of x
 
 ```
 
@@ -938,6 +911,43 @@ From the above visualization, sales and profit tend to increase together. Quanti
 Discount is inversely related to sales, profit and quantity.
 
 
+
+
+Using the Elbow method to determine the optimal number of clusters involves plotting the within cluster sum of squares. The optimal number of clusters is the one located at the "bend" on the graph, where WSS is lowered. Within-cluster sum of squares (WCSS) is the degree to which items within a cluster are similar or dissimilar (Nwanganga and Chapple, 2020).
+
+The closer the items within a cluster are to the centroid, the lower the value of WCSS. 
+```{r}
+set.seed(123)
+
+#to compute the total within-cluster sum of squares:
+fviz_nbclust(normal_transactions_scaled, kmeans, method = "wss", k.max = 20) + 
+  theme_minimal() + ggtitle("The Elbow Method")
+```
+The optimal number of clusters looks to be k = 4 (the elbow point). K=4 is where the curve bends, indicating the point at which increasing the number of clusters (k) does not significantly decrease the total within cluster sum of square value.  
+
+Another method is to look at the silhouette method. The silhouette of an observation is a value that represents how closely the item is matched with other items with the the same cluster and how loosely matched it is with observations in a different cluster. 
+```{r}
+fviz_nbclust(normal_transactions_scaled, kmeans, method = "silhouette", k.max = 24) + theme_minimal() + ggtitle("The Silhouette Plot")
+```
+The silhouette method suggests the optimal number of clusters is 2, since k=2 corresponds to the highest average silhouette width value. 
+
+
+A third statistical approach called the gap statistic method, compares the difference between clusters created from observed data and clusters created from a randomly generated dataset called the reference dataset.  The gap statistic for a given k value is the difference in the total WCSS for the observed data and that of the reference dataset. The optimal number of clusters is denoted by the k value that yields the largest gap statistic.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# compute gap statistic
+set.seed(123)
+gap_stat <- clusGap(normal_transactions_scaled, FUN = kmeans, nstart = 25,
+                    K.max = 10, B = 50)
+# Print the result
+print(gap_stat, method = "firstmax")
+```
+Visualize the results of the gap statistic method.
+```{r}
+fviz_gap_stat(gap_stat)
+```
+Finding the optimal number of clusters using the gap statistic. 
+
 ```{r, echo= FALSE, message=FALSE, warning= FALSE}
 #Compute K-means clustering with k=3 (3 initial distinct cluster centres) on just the normal transactions from the dataset. Nstart =25 means generate 25 initial configurations and find the average for all the centroids. 
 set.seed(123)
@@ -947,32 +957,6 @@ results_kmeans <- kmeans(normal_transactions_scaled, centers = 3, nstart =25)
 #kmeans clusters to show the group of the individuals
 
 #results_kmeans$cluster
-```
-
-Using the Elbow method to determine the optimal number of clusters involves plotting the within cluster sum of squares. The optimal number of clusters is the one located at the "bend" on the graph, where WSS is lowered.
-```{r}
-set.seed(123)
-
-#to compute the total within-cluster sum of squares:
-fviz_nbclust(normal_transactions_scaled, kmeans, method = "wss", k.max = 20) + 
-  theme_minimal() + ggtitle("The Elbow Method")
-```
-The optimal number of clusters looks to be k = 4. 
-
-Another method is to look at the silhouette method.
-```{r}
-fviz_nbclust(normal_transactions_scaled, kmeans, method = "silhouette", k.max = 24) + theme_minimal() + ggtitle("The Silhouette Plot")
-```
-The silhouette method suggests the optimal number of clusters is 2. 
-
-
-Another method is using NbClust which provides 30 indices for determining the relevant number of clusters. It looks at all combinations of clusters, distance measures, and clustering methods. 
-
-```{r}
-# res.nbclust <- NbClust(normal_transactions_scaled, distance = "euclidean",
-#                   min.nc = 2, max.nc = 9, 
-#                   method = "complete", index ="all")
-# factoextra::fviz_nbclust(res.nbclust) + theme_minimal() + ggtitle("NbClust's optimal number of clusters")
 ```
 
 ```{r}
@@ -1059,10 +1043,9 @@ fviz_cluster(results_kmeans_4, data = normal_transactions_scaled,
 
 Following this tutorial: https://towardsdatascience.com/clustering-on-mixed-type-data-8bbd0a2569c3
 
-K-means algorithm is limited in that it can only work with numerical data, whereas our dataset contains both numeric and categorical
-data.
+K-means algorithm is limited in that it can only work with numerical data, whereas our dataset contains both numeric and categorical data. 
 
-We will now try the PAM clustering algorithm (Partitioning across medoids).  K-medoids is more robust to outliers and noise than K-means. This algorithm uses Gower distance to measure the partial dissimilarity across individuals, and ranges in [0 1]. Standardization is first applied to the features, and the distance
+We will now try the PAM clustering algorithm (Partitioning across medoids).  K-medoids is more robust to outliers and noise than K-means. The reason for this is because K-medoids uses some of the observations as the cluster centres (medoids). This algorithm uses Gower distance to measure the partial dissimilarity across individuals, and ranges in [0 1]. Standardization is first applied to the features, and the distance
 between individuals represents the average of all feature specific distances. 
 
 Partial dissimilarity is different depending on the type of variable: numeric or categorical. 
@@ -1122,7 +1105,7 @@ plot(1:8, sil_width,
      ylab = "Silhouette Width")
 lines(1:8, sil_width)
 ```
-2 clusters has the highest silhouette width, while 4 has the second highest. 2 Clusters may be too simple, so We will pick k = 4.
+2 clusters has the highest silhouette width, while 4 has the second highest. Higher silhouette width is generally better.  2 Clusters may be too simple, so We will pick k = 4.
 
 To look at a summary of each of the clusters:
 
@@ -1189,10 +1172,12 @@ Available components:
 [1] "medoids"    "id.med"     "clustering" "objective"  "isolation"  "clusinfo"   "silinfo"    "diss"       "call"   
 
 
+These were the observations used as the medoids for the pam fit with k=4: 
+```{r}
+data2[pam_fit_4$medoids, ]
+```
 
-
-
-Plotting the kmedoids with k =4
+Plotting the k-medoids with k=4. This method applies t-distributed stochastic neighborhood embedding (t-SNE) which enables visualization of several variables in a lower dimensional space.
 ```{r, fig.height=8, fig.width=6}
 tsne_obj <- Rtsne(gower_dist, is_distance = TRUE)
 
@@ -1202,15 +1187,19 @@ tsne_data <- tsne_obj$Y %>%
   mutate(cluster = factor(pam_fit_4$clustering))
 
 ggplot(aes(x = X, y = Y), data = tsne_data) +
-  geom_point(aes(color = cluster))
+  geom_point(aes(color = cluster)) +
+  labs(title = 't-SNE 2D Projections of k-medoid clusters') +
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 Clusters still look like they have some overlap, but cluster 1 is pretty well defined. 
+
+
 
 ```{r}
 input_data <- data2
 ```
 
-
+We also tried using k =3 with the following re
 Let's try using k=3:
 ```{r}
 gower_dist_3 = daisy(input_data, metric = "gower", type = list(logratio = 3))
@@ -1270,76 +1259,16 @@ tsne_data <- tsne_obj$Y %>%
   mutate(cluster = factor(pam_fit_3$clustering))
 
 ggplot(aes(x = X, y = Y), data = tsne_data) +
-  geom_point(aes(color = cluster))
+  geom_point(aes(color = cluster)) +
+   labs(title = 't-SNE 2D Projections of k-medoid clusters') +
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
 
 
-Let's try using k=5:
-```{r}
-gower_dist_5 = daisy(input_data, metric = "gower", type = list(logratio = 3))
-                  gower_mat = as.matrix(gower_dist_5)
-                  pam_fit_5 = pam(gower_mat, k=5, diss=TRUE)
-```
+We also tried k=5 for k-medoids clustering. For k= 5, The average silhouette width per cluster were:
+[1] 0.05349182 0.10906323 0.04114758 0.08911682 0.07800729. The average silhouette width of the total data set for k=5 is 0.08049662. We also plotted the clustering result using the gower distance metric and t-SNE for dimensionality reduction. However, the plot shows there is still a great deal of overlap between the clusters. 
 
-```{r}
-pam_results_5 <- data2 %>%
-  mutate(cluster = pam_fit_5$clustering) %>%
-  group_by(cluster) %>%
-  do(the_summary = summary(.))
-pam_results_5$the_summary
-
-```
-```{r}
-#summary(pam_fit_5)
-```
-Medoids:
-     ID           
-[1,] "399"  "399" 
-[2,] "9"    "9"   
-[3,] "3027" "3027"
-[4,] "7230" "7230"
-[5,] "7554" "7554"
-
-    build      swap 
-0.3108903 0.3097443 
-
-Numerical information per cluster:
-     size  max_diss   av_diss  diameter  separation
-[1,] 1477 0.5268858 0.3377785 0.7446928 0.001792861
-[2,] 3127 0.5648233 0.2947558 0.7741892 0.014292276
-[3,] 1465 0.5496150 0.3155812 0.7789958 0.001792861
-[4,] 1618 0.5867120 0.3260236 0.7515684 0.014292276
-[5,] 2307 0.5948357 0.2969881 0.8127438 0.014472373
-
-Isolated clusters:
- L-clusters: character(0)
- L*-clusters: character(0)
-
- 
-```Average silhouette width per cluster:
-[1] 0.05349182 0.10906323 0.04114758 0.08911682 0.07800729
-Average silhouette width of total data set:
-[1] 0.08049662
-
-Available components:
-[1] "medoids"    "id.med"     "clustering" "objective"  "isolation"  "clusinfo"   "silinfo"    "diss"      
-[9] "call"     
-
-
-The average silhouette width of the total data set for k=5 is 0.08049662. 
-
-```{r, fig.height=8, fig.width=6}
-tsne_obj <- Rtsne(gower_dist_5, is_distance = TRUE)
-
-tsne_data <- tsne_obj$Y %>%
-  data.frame() %>%
-  setNames(c("X", "Y")) %>%
-  mutate(cluster = factor(pam_fit_5$clustering))
-
-ggplot(aes(x = X, y = Y), data = tsne_data) +
-  geom_point(aes(color = cluster))
-```
 
 ## Evaluating the consistency within Clusters of Data
 Silhouette coefficient can be used to compare the average distance to observations within the same cluster, to the average distance to observations in other clusters. 
@@ -1378,3 +1307,5 @@ https://www.datanovia.com/en/lessons/k-medoids-in-r-algorithm-and-practical-exam
 https://www.rdocumentation.org/packages/dbscan/versions/1.1-5/topics/lof
 
 https://towardsdatascience.com/10-tips-for-choosing-the-optimal-number-of-clusters-277e93d72d92f
+
+Nwanganga, F. and Chapple, M. (2020). Practical Machine Learning in R. Indianapolis, Indiana: Wiley & Sons. 
