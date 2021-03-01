@@ -8,44 +8,84 @@ library(fpc)
 library(factoextra)
 library(FactoMineR)
 library(ggpubr)
+library(readr)
+library(thematic)
+library(bslib)
 #############################################################################
 ###################################### UI ###################################
 
 ui <- fluidPage(
+  
+  theme = bs_theme(bg="#00783c", fg="#f0f0f0", primary="#EA80FC",
+                   secondary = "#f4c0ff", 
+                   base_font = font_google("Fira Sans", local = TRUE)),
+ titlePanel("Let's cluster!"),
+  
   sidebarLayout(
     sidebarPanel(
       fileInput("file1", "Please upload a CSV File that you want to analyze:", accept = ".csv"),
       helpText("Default max file size is 5MB."),
-      
-      checkboxInput(inputId =  "header", label="Header", TRUE),
-      
-      radioButtons (inputId = "stringsAsFactors", label = "Do you want strings to be treated as Factors?",
-                    choices = c("Yes" = "TRUE", "No" = "FALSE")),
-      
+      br(),
       numericInput(inputId =  "k", label="How many clusters do you want?",
                    value=3),
+      br(),
+      checkboxGroupInput(inputId ="columns", label="Below are all the columns of your data, 
+                         please select the ones you want to use for clustering:", 
+                         choices = c("1"=1,"2"=2)),
       
-      checkboxGroupInput(inputId =  "columns", label="Which columns do you want to use for clustering?", 
-                         choices = c("1"=1, "2"=2,"3"=3,"4"=4,"5"=5,"6"=6,
-                                     "7"=7,"8"=8,"9"=9,"10"=10,"11"=11,
-                                     "12"=12,"13"=13,"14"=14,"15"=15,"16"=16,
-                                     "17"=17,"18"=18,"19"=19,"20"=20,"21"=21,
-                                     "22"=22,"23"=23,"24"=24,"25"=25),selected = c(5,13,15,16,18:21)),
-      helpText("This app is suitable for dataset with up to 25 columns."),
+      numericInput(inputId =  "xaxis", label="Which column in your data do you want to plot on the x-axis to look at clusters
+                   (2D plot by clusters)?",
+                   value=7),
       
-      numericInput(inputId =  "xaxis", label="Which column do you want to plot on the x-axis for clustering?",
-                   value=18),
-      
-      numericInput(inputId = "yaxis", label = "Which column do you want to plot on the y-axis for clustering?",
-                   value=21)
+      numericInput(inputId = "yaxis", label = "Which column in your data do you want to plot on the y-axis to look at clusters 
+                   (2D plot by clusters)?",
+                   value=10),
+      width = 4
       
       ),
     
     mainPanel(
       tabsetPanel(
-      tabPanel("Plots for your data by clusters",
-        plotOutput("plot1")
+        
+        tabPanel("Introduction",
+                 h5("This app is an application of clustering analysis for mixed data, which contains both numeric and categorical variables.
+                    Clustering analysis is one of the unsupervised learning algorithms. 
+                    It finds similarities between data according to the characteristics 
+                    found in the data and grouping similar data objects into clusters. 
+                    Intuitively, it can be shown as the picture below."),
+                 br(),
+                 img(src = "https://raw.githubusercontent.com/ML1000-GroupB/Assignment-2/main/images.png", height = 140, width = 350, align="right",position="top"),
+                
+                 h5(em("How does this app work:")),
+                 h6(),
+                 
+                 tags$div(
+                   "1. The default plots in the 2 tabs are based on the US superstore data.",
+                   tags$a(href="https://www.kaggle.com/juhi1994/superstore", 
+                          em("The raw data can be found here."))
+                 ),
+                 
+                 h6(),
+                 tags$div("2. We chose 9 variables from the raw data, and added a transformed variable, which indicates the number of days it took to ship since the order was made. 
+                    Since there were over 9000 records in the raw data, for the sake of shorter computational time for display purpose, we randomly selected
+                    2000 records from the raw data to perform clustering and display the results in the 2 tabs.",
+                          a(href="https://github.com/ML1000-GroupB/Assignment-2/blob/main/US_Superstore_data_forclustering.csv",
+                            em("The traing data used to demonstrate clustering can be found here."))
+                   
+                 ),
+                 h6( ),
+
+                 h6("3. The current clustering method is xx, 
+                    the default number of cluster is 3, if you are not satisfied, please customize it on the left side panel"
+                    )
+                 ),
+        
+        
+      tabPanel("2D Plot by clusters",
+        plotOutput("plot1"),
+        h5("The above xxx")
        ),
+      
       tabPanel("Visualization of FAMD (Factor Analysis of Mixed Data)",
       plotOutput("plot2")
       )
@@ -57,84 +97,167 @@ ui <- fluidPage(
 ##############################################################################
 ################################### SERVER ###################################
 
-server <- function(input, output) {
+server <- function(input, output, session) {
   
-  input_data = reactive({
+  dsnames <- c()
+  
+  input_data_upload = reactive({
     
     inFile <- input$file1
     
     if (is.null(inFile)) {
-      return()
-      } 
-        
-        input_data = read.csv(inFile$datapath, 
-                              stringsAsFactors = as.logical(input$stringsAsFactors), 
-                              header = input$header)
-        
-        input_data=as.data.frame(input_data)
-        input_data
+              input_data_upload <- read.csv("https://raw.githubusercontent.com/ML1000-GroupB/Assignment-2/main/US_Superstore_data_forclustering.csv",
+                                            stringsAsFactors = T)
+              input_data_upload=as.data.frame(input_data_upload)
+              
+    } else {
       
+      input_data_upload = read.csv(inFile$datapath, 
+                                   stringsAsFactors = T, 
+                                   header = T)
+      
+      input_data_upload=as.data.frame(input_data_upload)
+      input_data_upload
+      
+      }
     })
   
+  observe({
+#    req(input_data_upload())
+    dsnames <- names(input_data_upload())
+    cb_options <- list()
+    cb_options[ dsnames] <- dsnames
+    updateCheckboxGroupInput(session, "columns",
+                             label = "Below are all the columns in your data, 
+                         please select the ones you want to use for clustering:",
+                             choices = cb_options,
+                             selected = cb_options)
+  })
   
-  pam_fit <- reactive({
+  
+  pam_fit_upload <- reactive({
     
-    if (is.null(input_data())) {return()} else {
+    if (is.null(input_data_upload())) {return()} else {
       
       withProgress(
         message = 'Clustering in progress. Please wait ...', {
           
-          gower_dist = daisy(input_data()[,as.numeric(input$columns)], metric = "gower", type = list(logratio = 3))
+          
+ set.seed(123)         
+          gower_dist = daisy(input_data_upload()[,input$columns], metric = "gower", type = list(logratio = 3))
           
           gower_mat = as.matrix(gower_dist)
           
-          pam_fit = pam(gower_mat, k=3, diss=TRUE)
+          pam_fit_upload = pam(gower_mat, k=input$k, diss=TRUE)
           
         }
       )
     }
     
   })
-  
-  
-  
-output$plot1 <- renderPlot({
 
-  if (is.null(input_data())) {return()} else {
+
+output$plot1 <- renderPlot({
+  
+  if (is.null(input_data_upload())) {return()} else {
     
     withProgress(
       message = 'Clustering in progress. Please wait ...', {
         
-        par(mar = c(2,2,2,2))
+        par(mar = c(3,3,3,3))
         
-        X=input$xaxis
+        X=input_data_upload()[,input$xaxis]
         
-        Y=input$yaxis
+        Y=input_data_upload()[,input$yaxis]
         
-        ggplot(data = input_data(), aes(x = input_data()[,X], y = input_data()[,Y]))+ 
-          geom_point( aes(color = factor(pam_fit()$clustering) ) ) + 
-          scale_color_manual(name = "Clusters",values = c("blue","red","green"), 
-                             labels=c("Cluster 1","Cluster 2","Cluster 3"))
+        X_name=colnames(input_data_upload())[input$xaxis]
         
+        Y_name=colnames(input_data_upload()[input$yaxis])
+        
+        legendnames=paste(rep("Cluster",input$k),1:(input$k))
+        
+        if (class(X)=="factor" & class(Y)!="factor") {
+          
+          if (max(Y)>1000) {
+            
+            ggplot(data = input_data_upload(), aes(x = X, y = Y))+ 
+              geom_point( aes(color = factor(pam_fit_upload()$clustering) ) ) + 
+              scale_color_manual(name = "Clusters", values = 1:(input$k),
+                                 labels= legendnames) +
+              labs(x=X_name,y=Y_name) +
+              ylim(-max(Y)/5,max(Y)/5)
+            
+            
+          } else {
+            ggplot(data = input_data_upload(), aes(x = X, y = Y))+ 
+              geom_point( aes(color = factor(pam_fit_upload()$clustering) ) ) + 
+              scale_color_manual(name = "Clusters", values = 1:(input$k),
+                                 labels= legendnames) +
+              labs(x=X_name,y=Y_name) 
+          }
+          
+             } else {
+          
+          if (class(X)!="factor"  & class(Y)!="factor") {
+            
+            ggplot(data = input_data_upload(), aes(x = X, y = Y))+ 
+              geom_point( aes(color = factor(pam_fit_upload()$clustering) ) ) + 
+              scale_color_manual(name = "Clusters", values = 1:(input$k),
+                                 labels= legendnames) +
+              labs(x=X_name,y=Y_name) +
+              xlim(0,ifelse(max(X)>1000,max(X)/5,max(X))) +
+              ylim(ifelse(max(Y)>1000 & min(Y)<0,-max(Y)/10,
+                          ifelse(max(Y)>1000 & min(Y)>=0, min(Y),min(Y))),
+                   ifelse(max(Y)>1000,max(Y)/10,max(Y))
+                   )
+            
+          } else { 
+            
+            if (class(X)!="factor" & class(Y)=="factor" ) {
+              
+              ggplot(data = input_data_upload(), aes(x = X, y = Y))+ 
+                geom_point( aes(color = factor(pam_fit_upload()$clustering) ) ) + 
+                scale_color_manual(name = "Clusters", values = 1:(input$k),
+                                   labels= legendnames) +
+                labs(x=X_name,y=Y_name) +
+                xlim(min(X),
+                     ifelse(max(X)>1000,max(X)/10,max(X)))
+              
+            } else {
+              
+              ggplot(data = input_data_upload(), aes(x = X, y = Y))+ 
+                geom_point( aes(color = factor(pam_fit_upload()$clustering) ) ) + 
+                scale_color_manual(name = "Clusters", values = 1:(input$k),
+                                   labels= legendnames) +
+                labs(x=X_name,y=Y_name) 
+                
+            }
+            
+
+          }
+        }
       }
     )
   }
-
+  
 })
+
 
 output$plot2 <- renderPlot({
   
   
-  if (is.null(input_data())) {return()} else {
+  if (is.null(input_data_upload())) {return()} else {
     
     withProgress(
       message = 'FAMD in progress. Please wait ...', {
+        
+set.seed(123)
+        
+  famd_fca=FAMD(input_data_upload()[,input$columns], graph = F)
 
-  famd_fca=FAMD(input_data()[,as.numeric(input$columns)])
-#  plot(input_data()[,18],xlim = c(0,1000),ylim = c(0,1000))
-  ind=get_famd_ind(famd_fca)$coord
+    ind=get_famd_ind(famd_fca)$coord
   ind=as.data.frame(ind)
-  ind$cluster=as.factor(pam_fit()$clustering)
+  ind$cluster=as.factor(pam_fit_upload()$clustering)
   
   ggscatter(
     ind, x = "Dim.1", y = "Dim.2",
@@ -142,8 +265,6 @@ output$plot2 <- renderPlot({
     size = 1.5,  legend = "right", ggtheme = theme_classic()
     
   ) 
-  
-  
       }
 )
   }
@@ -155,6 +276,6 @@ output$plot2 <- renderPlot({
 
 # Create the shiny app             #
 ####################################
-shinyApp(ui = ui, server = server)
+shinyApp(ui = ui, server = server )
 
 
