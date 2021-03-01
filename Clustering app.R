@@ -48,14 +48,26 @@ ui <- fluidPage(
       tabsetPanel(
         
         tabPanel("Introduction",
-                 h5("This app is an application of clustering analysis for mixed data, which contains both numeric and categorical variables.
+                 h6("This app is an application of clustering analysis for mixed data, which contains both numeric and categorical variables.
                     Clustering analysis is one of the unsupervised learning algorithms. 
                     It finds similarities between data according to the characteristics 
                     found in the data and grouping similar data objects into clusters. 
                     Intuitively, it can be shown as the picture below."),
-                 br(),
+                 h5(),
                  img(src = "https://raw.githubusercontent.com/ML1000-GroupB/Assignment-2/main/images.png", height = 140, width = 350, align="right",position="top"),
                 
+                 h5("Quick user guide:"),
+                 h5(),
+                 h6(em("  * Upload your own data from the 'Browse' button on the top left corner.")),
+                 h6(em("  * Select the number of clusters/groups you want for your data.")),
+                 h6(em("  * Select the variables that you want to perform clustering on from the left panel.")),
+                 h6(em("  * Input the column indices of the variables that you want to take a look at the 2D plot in the bottom left boxs.")),
+                 h6(em("  * Go to '2D plot by clusters' to inspect the clusters.")),
+                 h6(em("  * Go to the 'Visualization of FAMD' tab to inspect the clusters based on the first two principal components.")),
+                 h5(strong("Please note whenever you change your selections on the left side panel, the results and plots will be updated accordingly and automatically on the tabs! 
+                           ")),
+                 h5(),
+                 
                  h5(em("How does this app work:")),
                  h6(),
                  
@@ -75,19 +87,45 @@ ui <- fluidPage(
                  ),
                  h6( ),
 
-                 h6("3. The current clustering method is xx, 
-                    the default number of cluster is 3, if you are not satisfied, please customize it on the left side panel"
-                    )
+                 h6("3. Since the data contains both numeric and categorical variables, we use Gower's distance to measure the similarities between two records, 
+                 and then use PAM (Partitioning Around Medoids) algorithm to identify clusters. 
+                    The default number of clusters used in this app is 3, if it does not suit your business case, please customize it on the left side panel."
+                    ),
+                 h6(),
+                 
+                 h6("4. The '2D plot by clusters' tab shows the scatter plot of any two variables of your choice from your data. Each record/data point is colored by its cluster.
+                     For a good clustering partition, different colors in the scatter plot should be as separated as possible, and the points of the same color should cluster closely."),
+                 h6(),
+                 
+                 h6("5. The 'Visualization of FAMD (Factor Analysis of Mixed Data)' tab demonstrates the clusters on the first two principal components of the data, 
+                    which is done by FAMD. FAMD is a principal component method dedicated to analyze a data set containing both numeric and categorical variables. 
+                    Plots from a good clustering should have little overlapping from the concentration ellipse around each cluster. If you obtain a plot with a lot overlapping areas, 
+                    please consider clean or transform your data, or change the number of clusters."),
+                 br()
+                 
                  ),
         
         
       tabPanel("2D Plot by clusters",
         plotOutput("plot1"),
-        h5("The above xxx")
+        br(),
+        tags$div("The above sample scatter plot of the Sales and Profit variables, from the ",
+                 a(href="https://github.com/ML1000-GroupB/Assignment-2/blob/main/US_Superstore_data_forclustering.csv",
+                   em("randomly sampled 2000 records from the US Superstore data")), "shows the profit can either go up or go down as the sales increases. 
+                   Moreover, the three colors (i.e., three clusters) overlapped each other, indicating the three clusters do not show a clear 
+                  relationship between Profit and Sales. In other words, the clusters may not be very meaningful. This could be due to only 20% of all records were used to identify clusters, 
+                 or some other new variables or potential transformations might be needed to figure out a clearer pattern."
+        )
        ),
       
       tabPanel("Visualization of FAMD (Factor Analysis of Mixed Data)",
-      plotOutput("plot2")
+      plotOutput("plot2"),
+      br(),
+      tags$div("The above sample plot of the Sales and Profit variables, from the ",
+               a(href="https://github.com/ML1000-GroupB/Assignment-2/blob/main/US_Superstore_data_forclustering.csv",
+                 em("randomly sampled 2000 records from the US Superstore data")), "confirms what was shown from the 2D plot in the first tab - the clusters are overlapping,
+               indicating the records in the sample data might not be well partitioned. If you obtain a similar plot, please consider other possible methods to improve your clusters."
+      )
       )
     )
   )
