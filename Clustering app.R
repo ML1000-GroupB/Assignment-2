@@ -19,15 +19,15 @@ ui <- fluidPage(
   theme = bs_theme(bg="#00783c", fg="#f0f0f0", primary="#EA80FC",
                    secondary = "#f4c0ff", 
                    base_font = font_google("Fira Sans", local = TRUE)),
- titlePanel("Let's cluster!"),
+ titlePanel("Let's cluster for mixed data!"),
   
   sidebarLayout(
     sidebarPanel(
       fileInput("file1", "Please upload a CSV File that you want to analyze:", accept = ".csv"),
-      helpText("Default max file size is 5MB."),
+      helpText("Default max file size is 30MB."),
       br(),
       numericInput(inputId =  "k", label="How many clusters do you want?",
-                   value=3),
+                   value=3,min=0,max=10),
       br(),
       checkboxGroupInput(inputId ="columns", label="Below are all the columns of your data, 
                          please select the ones you want to use for clustering:", 
@@ -35,11 +35,11 @@ ui <- fluidPage(
       
       numericInput(inputId =  "xaxis", label="Which column in your data do you want to plot on the x-axis to look at clusters
                    (2D plot by clusters)?",
-                   value=7),
+                   value=7, min=0),
       
       numericInput(inputId = "yaxis", label = "Which column in your data do you want to plot on the y-axis to look at clusters 
                    (2D plot by clusters)?",
-                   value=10),
+                   value=10,min=0),
       width = 4
       
       ),
@@ -48,63 +48,75 @@ ui <- fluidPage(
       tabsetPanel(
         
         tabPanel("Introduction",
-                 h6("This app is an application of clustering analysis for mixed data, which contains both numeric and categorical variables.
+                 h5("This app is an application of clustering analysis for mixed data, which contains both numeric and categorical variables.
                     Clustering analysis is one of the unsupervised learning algorithms. 
                     It finds similarities between data according to the characteristics 
-                    found in the data and grouping similar data objects into clusters. 
+                    found in the data and groups similar data objects into clusters. 
                     Intuitively, it can be shown as the picture below."),
-                 h5(),
+                 br(),
                  img(src = "https://raw.githubusercontent.com/ML1000-GroupB/Assignment-2/main/images.png", height = 140, width = 350, align="right",position="top"),
                 
-                 h5("Quick user guide:"),
-                 h5(),
-                 h6(em("  * Upload your own data from the 'Browse' button on the top left corner.")),
-                 h6(em("  * Select the number of clusters/groups you want for your data.")),
-                 h6(em("  * Select the variables that you want to perform clustering on from the left panel.")),
-                 h6(em("  * Input the column indices of the variables that you want to take a look at the 2D plot in the bottom left boxs.")),
-                 h6(em("  * Go to '2D plot by clusters' to inspect the clusters.")),
-                 h6(em("  * Go to the 'Visualization of FAMD' tab to inspect the clusters based on the first two principal components.")),
-                 h5(strong("Please note whenever you change your selections on the left side panel, the results and plots will be updated accordingly and automatically on the tabs! 
-                           ")),
                  h5(),
                  
-                 h5(em("How does this app work:")),
-                 h6(),
+                 h5("How does this app work:"),
+                 h5(),
+                 
+                 h6(em("1. What is the background of the default data in this app?")),
                  
                  tags$div(
-                   "1. The default plots in the 2 tabs are based on the US superstore data.",
+                   "The default plots in the 3rd and 4th tabs are based on the US superstore data.",
                    tags$a(href="https://www.kaggle.com/juhi1994/superstore", 
-                          em("The raw data can be found here."))
+                          em("The raw data can be found by clicking here."))
                  ),
                  
                  h6(),
-                 tags$div("2. We chose 9 variables from the raw data, and added a transformed variable, which indicates the number of days it took to ship since the order was made. 
-                    Since there were over 9000 records in the raw data, for the sake of shorter computational time for display purpose, we randomly selected
-                    2000 records from the raw data to perform clustering and display the results in the 2 tabs.",
+                 h6(em("2. What data was used for the default demonstrative plots in the 3rd and 4th tab?")),
+                 tags$div(
+                 "We chose 9 variables from the original data, and added a transformed variable, which indicates the number of days it took to ship since the order was made. 
+                    Since there were over 9000 records in the raw data and the computational time of the PAM and FAMD function could be long, for display purpose, we randomly selected
+                    2000 records from the raw data to perform clustering and display the results in the last 2 tabs.",
                           a(href="https://github.com/ML1000-GroupB/Assignment-2/blob/main/US_Superstore_data_forclustering.csv",
-                            em("The traing data used to demonstrate clustering can be found here."))
+                            em("The traing data used to demonstrate clustering can be found by clicking here."))
                    
                  ),
                  h6( ),
 
-                 h6("3. Since the data contains both numeric and categorical variables, we use Gower's distance to measure the similarities between two records, 
+                 h6(em("3. What clustering method is used in this app?")),
+                 h6("Since original the data contains both numeric and categorical variables, we use Gower's distance to measure the similarities between two records, 
                  and then use PAM (Partitioning Around Medoids) algorithm to identify clusters. 
                     The default number of clusters used in this app is 3, if it does not suit your business case, please customize it on the left side panel."
                     ),
                  h6(),
                  
-                 h6("4. The '2D plot by clusters' tab shows the scatter plot of any two variables of your choice from your data. Each record/data point is colored by its cluster.
+                 h6(em("4. How to read the plot in the 3rd tab?")),
+                 h6("The '2D plot by clusters' tab shows the scatter plot of any two variables of your choice from your data. Each record/data point is colored by its cluster.
                      For a good clustering partition, different colors in the scatter plot should be as separated as possible, and the points of the same color should cluster closely."),
                  h6(),
                  
-                 h6("5. The 'Visualization of FAMD (Factor Analysis of Mixed Data)' tab demonstrates the clusters on the first two principal components of the data, 
+                 h6(em("5. How to read the plot in the 4th tab?")),
+                 h6("The 'Visualization of FAMD (Factor Analysis of Mixed Data)' tab demonstrates the clusters on the first two principal components of the data, 
                     which is done by FAMD. FAMD is a principal component method dedicated to analyze a data set containing both numeric and categorical variables. 
                     Plots from a good clustering should have little overlapping from the concentration ellipse around each cluster. If you obtain a plot with a lot overlapping areas, 
-                    please consider clean or transform your data, or change the number of clusters."),
+                    please consider clean or transform your data, or change the number of clusters."), 
+                h6("Please note that if your data contains only numeric or categorical variables, 
+                    the clustering will still work and you can still get a 2D plot on your origianl variables. However, since FAMD is intended for mixed data only, 
+                    you will not be able to get a clustering plot on the FAMD reduced dimensions in the 4th tab if your data has only numeric or categorical variables. "),
                  br()
                  
                  ),
-        
+       tabPanel("How to use this app?",
+                h6("  1. Upload your own data from the 'Browse' button on the top left corner."),
+                h6("  2. Select the number of clusters/groups you want for your data."),
+                h6("  3. Select the variables that you want to perform clustering on from the left panel."),
+                h6("  4. Input the column indices of the variables that you want to take a look at the 2D plot in the bottom left boxs."),
+                h6("  5. Go to '2D plot by clusters' to inspect the clusters."),
+                h6("  6. Go to the 'Visualization of FAMD' tab to inspect the clusters based on the first two principal components."),
+                h5(strong("Please note whenever you change your selections on the left side panel, the results and plots will be updated accordingly and automatically on the tabs! 
+                           ")),
+                h6(em("Please note this clustering app may not work for large dataset due to memory limit.")),
+                h5()
+       ),
+         
         
       tabPanel("2D Plot by clusters",
         plotOutput("plot1"),
@@ -137,6 +149,8 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   
+  options(shiny.maxRequestSize = 30*1024^2)
+  
   dsnames <- c()
   
   input_data_upload = reactive({
@@ -155,6 +169,7 @@ server <- function(input, output, session) {
                                    header = T)
       
       input_data_upload=as.data.frame(input_data_upload)
+#      input_data_upload=input_data_upload[complete.cases(input_data_upload),]
       input_data_upload
       
       }
