@@ -299,10 +299,16 @@ superstore_sales<-as_tibble(superstore_sales)
 
 ```{r}
 
-# superstore_sales_anomalized <- superstore_sales %>%
-#     time_decompose(sales_amt, merge = TRUE) %>%
-#     anomalize(remainder) %>%
-#     time_recompose()
+summary<-list("Sales"=sum(superstore$sales_amt),"Profit"=sum(superstore$profit_amt),"Profit Ratio"=sum(superstore$profit_amt)/sum(superstore$sales_amt),"Profit Per Order"=sum(superstore$profit_amt)/n_distinct(superstore$orderid),"Sales Per Customer"=sum(superstore$sales_amt)/n_distinct(superstore$customer_id),"Avg.Discount"=mean(superstore$discount),"Quantity"=sum(superstore$quantity))
+
+
+datsummary<-as.data.frame(summary)
+datsummary$Sales<-currency(datsummary$Sales ,digits=0L)
+datsummary$Profit<-currency(datsummary$Profit ,digits=0L)
+datsummary$Sales.Per.Customer<-currency(datsummary$Sales.Per.Customer ,digits=0L)
+datsummary$Profit.Per.Order<-currency(datsummary$Profit.Per.Order ,digits=0L)
+datsummary$Profit.Ratio<-percent(datsummary$Profit.Ratio)
+datsummary$Avg.Discount<-percent(datsummary$Avg.Discount)
 
 
 
@@ -455,17 +461,17 @@ superstore_kmean<-superstore_unq[,c("sales_amt","profit_amt","quantity","discoun
 
 
 # Elbow method
-fviz_nbclust(scale(superstore_kmean), kmeans, method = c("wss"))+
-  geom_vline(xintercept = 4, linetype = 2)+
-  labs(subtitle = "Elbow method")
+# fviz_nbclust(scale(superstore_kmean), kmeans, method = c("wss"))+
+#   geom_vline(xintercept = 4, linetype = 2)+
+#   labs(subtitle = "Elbow method")
 
 
 ```
 ```{r include=FALSE}
 #Silhouette method
 
-fviz_nbclust(scale(superstore_kmean), kmeans, method = "silhouette")+
-  labs(subtitle = "Silhouette method")
+# fviz_nbclust(scale(superstore_kmean), kmeans, method = "silhouette")+
+#   labs(subtitle = "Silhouette method")
 
 ```
 
@@ -474,8 +480,8 @@ Gap statistic method
 
 ```{r include=FALSE}
 
-fviz_nbclust(scale(superstore_kmean), kmeans, nstart = 25,  method = "gap_stat", nboot = 50)+
-  labs(subtitle = "Gap statistic method")
+# fviz_nbclust(scale(superstore_kmean), kmeans, nstart = 25,  method = "gap_stat", nboot = 50)+
+#   labs(subtitle = "Gap statistic method")
 
 ```
 
@@ -595,37 +601,9 @@ print(dbc)
 
 #status<-cluster.stats(dist(superstore_dbc), dbc$cluster)
 superstore_unq<-mutate(superstore_unq,outlier_dbcstatus=ifelse(dbc$cluster==0 ,"Yes","No"))
-
 head(superstore_unq)
 
 ```
-
-
-
-```{r}
-
-summary<-list("Sales"=sum(superstore$sales_amt),"Profit"=sum(superstore$profit_amt),"Profit Ratio"=sum(superstore$profit_amt)/sum(superstore$sales_amt),"Profit Per Order"=sum(superstore$profit_amt)/n_distinct(superstore$orderid),"Sales Per Customer"=sum(superstore$sales_amt)/n_distinct(superstore$customer_id),"Avg.Discount"=mean(superstore$discount),"Quantity"=sum(superstore$quantity))
-
-
-datsummary<-as.data.frame(summary)
-
-
-datsummary$Sales<-currency(datsummary$Sales ,digits=0L)
-datsummary$Profit<-currency(datsummary$Profit ,digits=0L)
-datsummary$Sales.Per.Customer<-currency(datsummary$Sales.Per.Customer ,digits=0L)
-datsummary$Profit.Per.Order<-currency(datsummary$Profit.Per.Order ,digits=0L)
-datsummary$Profit.Ratio<-percent(datsummary$Profit.Ratio)
-datsummary$Avg.Discount<-percent(datsummary$Avg.Discount)
-
-
-
-datsummary %>%
-  kbl() %>%
-  kable_styling(bootstrap_options = "striped") %>% 
-row_spec(0, bold = T, color = "white", background = "#D7261E")
-
-```
-
 
 
 
