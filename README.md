@@ -4,4 +4,4 @@ York University. ML1000 - Machine Learning in Business Context. Assignment #2 - 
 Anomaly Detection for Superstore dataset
 
 
-Shiny URL: https://crystalzhu72.shinyapps.io/MixedDataClustering/ (still working on it to improve)
+Shiny URL: https://crystalzhu72.shinyapps.io/MixedDataClustering/ 
