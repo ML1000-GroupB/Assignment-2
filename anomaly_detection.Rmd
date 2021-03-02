@@ -46,10 +46,15 @@ library(outForest)
 library(factoextra)
 library(cluster)
 library(lubridate)
-#library(reshape2)
-#library(dbscan)
+library(reshape2)
+library(dbscan)
 library(fpc)
-
+#library(plotly)
+#library(ggvis)
+library(ggiraph)
+library(wesanderson)
+library(kableExtra)
+library(formattable)
 
 
 ```
@@ -111,6 +116,11 @@ superstore$ship_date<-as.Date(superstore$ship_date,format="%Y-%m-%d")
 # add day columns
 superstore$orderday<-yday(superstore$order_date)
 superstore$shipday<-yday(superstore$ship_date)
+
+
+
+#add year column
+superstore$orderyear<-year(superstore$order_date)
 
 
 
@@ -317,7 +327,7 @@ superstore_unq<-superstore[!duplicated(superstore[c("sales_amt","profit_amt","qu
 
 #select numerical variables
 superstore_lof<-superstore_unq[,c("sales_amt","profit_amt","quantity","discount","orderday","shipday")]
-
+superstore_lof<-scale(superstore_lof)
 
 ```
 
@@ -386,6 +396,7 @@ RF alogorithm  work well without parameter tuning, outliers in the input variabl
 ```{r}
 #dataframe for outforest
 superstore_out<-superstore_unq[,c("sales_amt","profit_amt","quantity","discount","orderday","shipday")]
+superstore_out<-scale(superstore_out)
 
 #fit outforest
 outforest_outlier<-outForest(superstore_out, replace = "NA" )
@@ -426,7 +437,7 @@ plot(outforest_outlier,what="scores")
 ```
 ```{r}
 
-Data(outforest_outlier)
+#Data(outforest_outlier)
 
 ```
 
@@ -435,7 +446,7 @@ Data(outforest_outlier)
 
 
 
-```{r}
+```{r include=FALSE}
 
 #find k value for clusters
 
@@ -450,7 +461,7 @@ fviz_nbclust(scale(superstore_kmean), kmeans, method = c("wss"))+
 
 
 ```
-```{r}
+```{r include=FALSE}
 #Silhouette method
 
 fviz_nbclust(scale(superstore_kmean), kmeans, method = "silhouette")+
@@ -461,7 +472,7 @@ fviz_nbclust(scale(superstore_kmean), kmeans, method = "silhouette")+
 
 Gap statistic method
 
-```{r}
+```{r include=FALSE}
 
 fviz_nbclust(scale(superstore_kmean), kmeans, nstart = 25,  method = "gap_stat", nboot = 50)+
   labs(subtitle = "Gap statistic method")
@@ -534,26 +545,27 @@ DBSCAN is  density-based clustering algorithm, which can be used to identify clu
 
 
 #dataset for dbscan ,using sales and profit
-superstore_dbc<-superstore_unq[,c("sales_amt","profit_amt")]
+superstore_dbc<-superstore_unq[,c("sales_amt","profit_amt","quantity","discount","orderday","shipday")]
+superstore_dbc<-scale(superstore_dbc)
 
 
 
 #log transformation of profit amount ,since negatives in profit translate by adding one and transforming 
-superstore_dbc$profit_amt<-log10(superstore_dbc$profit_amt+1 -min(superstore_dbc$profit_amt))
+#superstore_dbc$profit_amt<-log10(superstore_dbc$profit_amt+1 -min(superstore_dbc$profit_amt))
 
 
 #log transformation of sales amount
-superstore_dbc$sales_amt<-log10(superstore_dbc$sales_amt)
+#superstore_dbc$sales_amt<-log10(superstore_dbc$sales_amt)
 
 
 
 ```
 
-find  maximum reachability distance (eps)
+K-distance plot -find  maximum reachability distance (eps)
 
 ```{r}
 #find value of eps
-dbscan::kNNdistplot(superstore_dbc, k = 4)
+dbscan::kNNdistplot(superstore_dbc, k = 3)
 abline(h = 0.15, lty = 2)
 ```
 
@@ -561,8 +573,10 @@ abline(h = 0.15, lty = 2)
 ```{r}
 
 # cluster assignements with dbscan
-dbc<-fpc::dbscan(superstore_dbc,eps=0.1, MinPts  = 5)
+dbc<-fpc::dbscan(superstore_dbc,eps=1.5, MinPts  = 10)
 fviz_cluster(dbc, superstore_dbc,  geom = "point")
+
+#hullplot(superstore_dbc, dbc$cluster)
 
 ```
 
@@ -573,8 +587,46 @@ The black points are outliers .
 
 
 ```{r}
+print(dbc)
+
 
 ```
+```{r}
+
+#status<-cluster.stats(dist(superstore_dbc), dbc$cluster)
+superstore_unq<-mutate(superstore_unq,outlier_dbcstatus=ifelse(dbc$cluster==0 ,"Yes","No"))
+
+head(superstore_unq)
+
+```
+
+
+
+```{r}
+
+summary<-list("Sales"=sum(superstore$sales_amt),"Profit"=sum(superstore$profit_amt),"Profit Ratio"=sum(superstore$profit_amt)/sum(superstore$sales_amt),"Profit Per Order"=sum(superstore$profit_amt)/n_distinct(superstore$orderid),"Sales Per Customer"=sum(superstore$sales_amt)/n_distinct(superstore$customer_id),"Avg.Discount"=mean(superstore$discount),"Quantity"=sum(superstore$quantity))
+
+
+datsummary<-as.data.frame(summary)
+
+
+datsummary$Sales<-currency(datsummary$Sales ,digits=0L)
+datsummary$Profit<-currency(datsummary$Profit ,digits=0L)
+datsummary$Sales.Per.Customer<-currency(datsummary$Sales.Per.Customer ,digits=0L)
+datsummary$Profit.Per.Order<-currency(datsummary$Profit.Per.Order ,digits=0L)
+datsummary$Profit.Ratio<-percent(datsummary$Profit.Ratio)
+datsummary$Avg.Discount<-percent(datsummary$Avg.Discount)
+
+
+
+datsummary %>%
+  kbl() %>%
+  kable_styling(bootstrap_options = "striped") %>% 
+row_spec(0, bold = T, color = "white", background = "#D7261E")
+
+```
+
+
 
 
 
