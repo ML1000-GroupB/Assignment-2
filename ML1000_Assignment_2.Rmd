@@ -1,7 +1,7 @@
 ---
 title: "ML 1000 Assignment 2"
 author: "by Anupama r.k, Queenie Tsang, Crystal (Yunan) Zhu"
-date: "02/03/2021"
+date: "03/03/2021"
 output:
   pdf_document: 
         fig_caption: yes
@@ -15,14 +15,16 @@ Anomaly detection or Outlier detection identifies data points, events or observa
 
 ## Business Case
 
+The Superstore is a chain of stores all over the United States with an online website where customers can view and order products. The Superstore company would like to understand more about customer preferences such as the types of products ordered, category, shipping service, quantity of items bought and whether customers use discounts. With a greater understanding of customer needs by location (city), the Superstore can then use this information to update their website. In particular, when customers select their city on the Superstore website, the site may show more products of a certain category which is commonly ordered by customers located in that area. 
+By conducting clustering on transaction data which spans over 3 years, the Superstore company find out groupings of transactions which may share similarities. For example, if a group of transactions indicate customers from a certain location are similar in typically using discounts, the Superstore may offer more promotional offers on their site for customers at that location. Another example would be if a cluster of transactions indicate typical sales are higher than other groupings, then the Superstore may display more expensive items on their site for customers in that location. 
 
 
 ## Objective
-Detect point anomalies from superstore dataset using K-NN and clustering methods. 
+Detect point anomalies from superstore dataset using K-NN and clustering methods. The objective is to detect point anomalies from superstore dataset using K-NN and clustering methods. Another objective is to use clustering methods to find commonalities in the transactions in order to offer more relevant products to customers based on their location and typical sales transactions.The clustering methods used are K-means, K-medoids and the principal components method using Factor Analysis of Mixed Data (FAMD).
 
 ## Data Understanding
 
-US Superstore dataset is sourced from [US uperstore dataset](https://www.kaggle.com/juhi1994/superstore) . The dataset have online orders for  Superstores in U.S. from 2014-2018. Tableau community is the owner of the dataset. The dataset has 9994 records and 21 attributes.
+US Superstore dataset is sourced from [US uperstore dataset](https://www.kaggle.com/juhi1994/superstore) . The dataset has online orders for Superstores in U.S. from 2014-2018. Tableau community is the owner of the dataset. The dataset has 9994 records and 21 attributes.
 
 ### Import data
 
@@ -89,7 +91,7 @@ data=cbind(data,diff_in_days)
 
 # Exploratory Data Analysis  
 ```{r}
-#check dup
+#check duplicates
 #data %>% distinct()
 data_nodup=distinct(data,data[,1:21], keep_all=TRUE)[,-22]
 #dim did not change - no dup
@@ -171,37 +173,27 @@ summary(data$Quantity)
 boxplot(data$Quantity)
 ``` 
 
-```{r fig.cap = "Histogram of quantity values"}
-#not many outliers - the number of products in each order is stable?
-hist(data$Quantity)
-#there is a very skewed distribution where most of the orders have small number of items
-```
 
-```{r fig.cap= "Plot of quantity distribution of transaction" }
+```{r fig.cap= "Plot of quantity distribution of transaction. There is a very skewed distribution where most of the orders have small number of items and there are not a lot of outliers" }
 ggplot(data = data, mapping = aes(x = Quantity)) +
   geom_histogram(binwidth = 0.5,fill="green4")
 ```
 
-```{r fig.cap= "Boxplot of discount values"}
+```{r fig.cap= "Boxplot of discount values. A strange looking box dataplot - median & 3rd quantile are the same (0.2) and not many orders have high discounts"}
 summary(data$Discount)
 boxplot(data$Discount)
-#a strange looking box dataplot - median & 3rd quantile are the same (0.2) - not many orders have high discounts
 
 ```
-```{r fig.cap="Plot of transactions involving discounts"}
+```{r fig.cap="Plot of transactions involving discounts. Sales transactions mostly do not involve discounts."}
 ggplot(data = data) +
   geom_histogram(mapping = aes(x = Discount), 
                  binwidth = 0.05,
                  xlab="Discount",
                  fill="green4")
 ```
-Sales transactions mostly do not involve discounts.
 
-```{r fig.cap = "Boxplot of profit"}
-summary(data$Profit)
+```{r fig.cap = "Boxplot of profit. Most of the profits are outside of the box - but most of them clustered close to the box(not with so extreme values"}
 boxplot(data$Profit)
-#most of the profits are outside of the box - but most of them clustered close to the box(not with so extreme values)
-
 ```
 
 ```{r fig.cap= "Profit distribution from transactions"}
@@ -213,7 +205,9 @@ labs(title=" Profit Distribution")
 #most of the orders have profits ~1000 (or ~800?), and ~ -800
 ```
 
-
+```{r}
+summary(data$Profit)
+```
 
 Remove the dot in the column names and replace with "_" to make variable names easier to handle:
 
@@ -227,19 +221,17 @@ colnames(data)
 
 Plot Sales in relation to Order Date:  
 
-```{r, echo=FALSE, warning=FALSE, fig.cap="Sales by order date"}
+```{r, echo=FALSE, warning=FALSE, fig.cap="Sales by order date. There are some clear outliers where the sales amount is much greater"}
 ggplot(data = data) +
   geom_point(mapping = aes(x = Order_Date, y = Sales), xlab="Order Date", ylab="Sales")
 ```
 
 
-
 Plot Profit in relation to Order Date:
-```{r}
+```{r warning=FALSE, fig.cap= "Profit in relation to order date. There are some outliers for certain days where profit is much lower or higher than the usual amount, such as when profit is below $2000, or above $2000." }
 ggplot(data = data) +
   geom_point(mapping = aes(x = Order_Date, y = Profit), xlab="Order Date", ylab="Profit")
 ```
-There are some outliers for certain days.
 
 
 ```{r}
@@ -617,7 +609,7 @@ wssplot(data1[,(15:18)], nc = 20)
 
 ```
 
-From the Within sum of squares plot, the optimal number of clusters is around 5. when the number of groups (k) initially increases 1 to 6, the error measures (sum of squares within a group) starts to decrease. When the number of groups is 7 or 8, the error measure starts to flatten. 
+From the Within sum of squares plot, the optimal number of clusters is around 4. when the number of groups (k) initially increases 1 to 4, the error measures (sum of squares within a group) starts to decrease. After around k=4 or k=5, the sum or sqaures within a group error value starts to mostly flatten. 
 
 The main purpose is to find a number of initial groups which achieves some fair amount of compactness (or similarity) between observations within a group. When k is too high, each cluster starts to represent individual points, whereas when k is too low, the observations may not 
 be in the right cluster. 
@@ -712,41 +704,6 @@ sil <- silhouette(clustering_results_4$cluster, dist(data1[,(15:18)]))
 fviz_silhouette(sil)
 ```
 
-We can try re-running the k-means model with the number of groups, k  = 7
-
-```{r}
-set.seed(123)
-clustering_results_7 <- kmeans(scale(data1[,(15:18)]), centers = 7, nstart = 25)
-#clustering_results_7
-
-```
-K-means clustering with 7 clusters of sizes 3317, 200, 12, 914, 2574, 9, 2968
-
-Cluster means:
-        Sales    Quantity   Discount       Profit
-1 -0.17099202 -0.55401551 -0.7476979   0.01999970
-2  3.70037129  1.13047292 -0.4332859   2.62598142
-3  8.36049519  1.14320638  2.0689103 -11.91366497
-4 -0.21824012  0.05129912  2.6451425  -0.46197164
-5  0.04223395  1.22666437 -0.2946436   0.03793345
-6 16.87915324  0.84359568 -0.6489669  19.79865024
-7 -0.11265862 -0.54381990  0.2993725  -0.10180518
-
-Within cluster sum of squares by cluster:
-[1] 1131.9138 1960.3599 1460.2766 1749.2333 3515.6513  778.7336 1329.8103
- (between_SS / total_SS =  70.2 %)
-
-Available components:
-
-[1] "cluster"      "centers"      "totss"        "withinss"     "tot.withinss" "betweenss"    "size"         "iter"        
-[9] "ifault"    
-
-
-We also re-ran kmeans with k=8, 
-Re-running k-means with k = 8:
-
-The within cluster sum of squares by cluster value is 73.1% for k= 8, which is not very different from the Within cluster sum of square by cluster value for k = 7 (70.2%).
-
 Compute PCA and extract individual components and extract individual components.
 
 
@@ -788,7 +745,7 @@ hist(lof_scores, breaks=10)
  superstore_unq[lof_outliers,]
 ```
 
-
+Here we are filtering for outliers which have LOF scores greater than 2. 
 ```{r}
 #outliers for z-score >2(how far an observation is from the mean)
 
@@ -806,7 +763,7 @@ head(x, 10)          #look at top 10 rows of x
 
 ## Plot LOF outliers
 
-```{r fig.cap="plot of outliers found using Local Outlier Factor algorithm"}
+```{r fig.cap="Plot of outliers found using Local Outlier Factor algorithm. Outliers are represented as red + signs."}
 pch <- rep(".", 7000)
 pch[lof_outliers] <- "+"
 col <- rep("black",7000)
@@ -895,6 +852,28 @@ Another method is to look at the silhouette method. The silhouette of an observa
 fviz_nbclust(normal_transactions_scaled, kmeans, method = "silhouette", k.max = 24) + theme_minimal() + ggtitle("The Silhouette Plot")
 ```
 The silhouette method suggests the optimal number of clusters is 2, since k=2 corresponds to the highest average silhouette width value. 
+
+### Gap Statistic Method
+A third statistical approach called the gap statistic method, compares the difference between clusters created from observed data and clusters created from a randomly generated dataset called the reference dataset.  The gap statistic for a given k value is the difference in the total WCSS for the observed data and that of the reference dataset. The optimal number of clusters is denoted by the k value that yields the largest gap statistic.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# compute gap statistic
+set.seed(123)
+gap_stat <- clusGap(normal_transactions_scaled, FUN = kmeans, nstart = 25,
+                    K.max = 10, B = 50)
+# Print the result
+print(gap_stat, method = "firstmax")
+```
+Visualize the results of the gap statistic method.
+```{r fig.cap = "Finding the optimal number of clusters for k-medoids using the gap statistic method"}
+fviz_gap_stat(gap_stat)
+```
+
+
+According to the gap statistic method, the optimal number of clusters is 1 which does not make sense as all observations will be in
+a single cluster. The next optimal k-value is 6. 
+
+From the results of the silhouette method, elbow method and gap statistic method, the optimal value of k=4 is the most common result (from both the silhouette method and the elbow method). So we tried both k=3 and k=4 for kmeans clustering. 
 
 ```{r, echo= FALSE, message=FALSE, warning= FALSE}
 #Compute K-means clustering with k=3 (3 initial distinct cluster centres) on just the normal transactions from the dataset. Nstart =25 means generate 25 initial configurations and find the average for all the centroids. 
@@ -1218,17 +1197,17 @@ We also tried k=5 for k-medoids clustering. For k= 5, The average silhouette wid
 [1] 0.05349182 0.10906323 0.04114758 0.08911682 0.07800729. The average silhouette width of the total data set for k=5 is 0.08049662, which is less than the silhouette width for k=4 (0.08368581). The optimal number of clusters is k=4, since it maximises the average silhouette width. Higher silhouette width values indicate better quality clustering (Datanova, 2018). We also plotted the clustering result using the gower distance metric and t-SNE for dimensionality reduction. However, the plot shows there is still a great deal of overlap between the clusters. 
 
 
-## Method 3 - Heirarchical Clustering on Principal Components Factor analysis of mixed data (FAMD) 
+## Method 3 - Clustering on Principal Components using Factor analysis of mixed data (FAMD) 
 
 Factor analysis of mixed data is a principal component method useful for analyzing datasets which contain numeric and categorical data. 
 
 Quantitative variables and qualitative variables are normalized to obtain a balance of the different sets of variables (Kassambra, 2017). 
 
 To run the Factor Analysis of Mixed Data method:
-```{r}
+```{r warning=FALSE}
 set.seed(123)
 
-famd_fca=FAMD(input_data, ncp = 5, sup.var = NULL, ind.sup = NULL, graph = TRUE)  #ncp is the number of dimensions to keep in the results which is 5 by default, sup.var is the vector of indexes of supplementary variables, ind.sup is a vector of the indexes of supplementary individuals
+famd_fca=FAMD(input_data, ncp = 5, sup.var = NULL, ind.sup = NULL, graph = FALSE)  #ncp is the number of dimensions to keep in the results which is 5 by default, sup.var is the vector of indexes of supplementary variables, ind.sup is a vector of the indexes of supplementary individuals
 
 ind=get_famd_ind(famd_fca)$coord   #retrieve the results for the individual observations
 ind=as.data.frame(ind)
@@ -1252,40 +1231,45 @@ High silhouette coefficient means that the observation is well clustered, while 
 
 
 ## Deployment
-
+The clustering model and anomaly detection app are deployed in shiny app. The interactive applications accepts inputs from the user and display accordingly. The url for application is below  
+[Clustering ]( https://crystalzhu72.shinyapps.io/MixedDataClustering/)
+[Anomaly Detection ]()
 
 
 ## Responsible ML Framework
-
-
-
+Superstore dataset has transaction data for online orders from Superstore customers. The dataset has Personally Identifiable information like Customer Name and Postal code. The use of personal information for other purposes, subsequent to the original transaction between an individual and an organization need consent from the customer. Individuals are increasingly feeling that they are losing control over their own personal information that may reside on thousands of servers largely beyond the control of existing privacy laws. This scenario can led to privacy invasion on a scale never before possible if not handled ethically. In this project, personally identifiable attributes are removed from the data as part of data cleansing and not considered in any stages of the study. The techniques used in the project is not biased for any particular region, city or customer segment.
 
 ## Conclusion
+In K means clustering, the goal is to have high similarity within each cluster, and low similarity between clusters. High similarity within a group means low variance within the cluster (within_SS), while low similarity between the groups is the same as high variance between the clusters (between_SS). Total_SS is all the variance in the data. The goal is to maximize the between_ss/total_ss value.
+
+For K-means clustering, for k=4 (4 clusters), when we perform clustering on the data without removing the outliers first, the Within cluster sum of squares by cluster: is 3315.203, 4284.643, 7571.058, 3614.724, and the between_SS / total_SS =  53.0 %. In comparison, when outlier transactions are first removed using the Local Outlier Factor method, for k=4, the Kmeans Within cluster sum of squares by cluster values are: 5391.896, 3363.327, 2252.744, 2215.088 and between_SS / total_SS =  56.7 %. This shows that by removing the outlier transactions first before performing K-means clustering, there is better clustering with a greater between_SS / total_SS percentage. 
+
 
 
 
 
 ## References
 
-https://www.datanovia.com/en/blog/k-means-clustering-visualization-in-r-step-by-step-guide/
+Alboukadel .K-Means Clustering Visualization in R: Step By Step Guide. Retrieved from: https://www.datanovia.com/en/blog/k-means-clustering-visualization-in-r-step-by-step-guide/
 
-https://www.tidymodels.org/learn/statistics/k-means/
+K-means clustering with tidy data principles. Retrieved from: https://www.tidymodels.org/learn/statistics/k-means/
 
-https://towardsdatascience.com/clustering-analysis-in-r-using-k-means-73eca4fb7967
+Fonseca, Clustering Analysis in R using K-means. Retrieved from:  https://towardsdatascience.com/clustering-analysis-in-r-using-k-means-73eca4fb7967
 
-https://towardsdatascience.com/clustering-evaluation-strategies-98a4006fcfc
+Manimaran, Clustering Evaluation strategies. Retrieved from: https://towardsdatascience.com/clustering-evaluation-strategies-98a4006fcfc
 
-https://www.analyticsvidhya.com/blog/2020/12/a-case-study-to-detect-anomalies-in-time-series-using-anomalize-package-in-r/
+Detect Anomalies in Time Series Using Anomalize Package In R. Retrieved from: https://www.analyticsvidhya.com/blog/2020/12/a-case-study-to-detect-anomalies-in-time-series-using-anomalize-package-in-r/
 
-https://www.datanovia.com/en/lessons/k-medoids-in-r-algorithm-and-practical-examples/
+Gama, K-Medoids in R: Algorithm and Practical Examples. Retrieved from:https://www.datanovia.com/en/lessons/k-medoids-in-r-algorithm-and-practical-examples/
 
-https://www.rdocumentation.org/packages/dbscan/versions/1.1-5/topics/lof
+Dbscan. Retrieved from:https://www.rdocumentation.org/packages/dbscan/versions/1.1-5/topics/lof
 
-https://towardsdatascience.com/10-tips-for-choosing-the-optimal-number-of-clusters-277e93d72d92f
+Kassambara, Riad, & Visitor, FAMD - Factor Analysis of Mixed Data in R: Essentials. Retrieved from:http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/115-famd-factor-analysis-of-mixed-data-in-r-essentials/#comments-list (Kassambara, 2017)
 
-Nwanganga, F. and Chapple, M. (2020). Practical Machine Learning in R. Indianapolis, Indiana: Wiley & Sons. 
+Filaire , Clustering on mixed type data. Retrieved from: https://towardsdatascience.com/clustering-on-mixed-type-data-8bbd0a2569c3
 
-http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/115-famd-factor-analysis-of-mixed-data-in-r-essentials/#comments-list   (Kassambara, 2017)
+Mayer, Using OutForest. Retrieved from: https://cran.r-project.org/web/packages/outForest/vignettes/outRanger.html
 
-Filair, T. (2018). Clustering on Mixed Type Data - A proposed approach using R. Accessed from         https://towardsdatascience.com/clustering-on-mixed-type-data-8bbd0a2569c3
+Cheng-Chung Li, Detecting Outlier by Local Outlier Factor and Random Forest. Retrieved from: https://rstudio-pubs-static.s3.amazonaws.com/216270_ccd62999b6504c22a390bb39fee22f39.html
 
+Nwanganga, F. and Chapple, M. (2020). Practical Machine Learning in R. Indianapolis, Indiana: Wiley & Sons.
