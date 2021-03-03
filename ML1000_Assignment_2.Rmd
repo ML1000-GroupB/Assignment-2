@@ -20,7 +20,7 @@ By conducting clustering on transaction data which spans over 3 years, the Super
 
 
 ## Objective
-Detect point anomalies from superstore dataset using K-NN and clustering methods. The objective is to detect point anomalies from superstore dataset using K-NN and clustering methods. Another objective is to use clustering methods to find commonalities in the transactions in order to offer more relevant products to customers based on their location and typical sales transactions.The clustering methods used are K-means, K-medoids and the principal components method using Factor Analysis of Mixed Data (FAMD).
+The objective is to detect point anomalies from superstore dataset using K-NN and clustering methods. Another objective is to use clustering methods to find commonalities in the transactions in order to offer more relevant products to customers based on their location and typical sales transactions.The clustering methods used are K-means, K-medoids and the principal components method using Factor Analysis of Mixed Data (FAMD).
 
 ## Data Understanding
 
@@ -147,42 +147,31 @@ length(unique(data$Product.ID))
 ```
 
 
-```{r, fig.cap = "Histogram of time difference between order date and ship date. The time difference between order date and ship date typically takes 4 days." }
+```{r, fig.cap = "Clockwise from top left: a)Histogram of time difference between order date and ship date. The time difference between order date and ship date typically takes 4 days. b) Boxplot of sales showing many outliers. c) Histogram of sales values showing a large amount of orders with very small Sales!, d) Boxplot of quantity values. Many transactions involve very few items, with median value of 3 items"}
+par(mfrow=c(2,2))
 hist(data$diff_in_days)
-```
-
-```{r}
-summary(data$Sales)
-```
-
-```{r fig.cap ="Boxplot of sales showing many outliers."}
 boxplot(data$Sales)
-```
-
-```{r fig.cap= "Histogram of sales values."}
 hist(data$Sales)
-#  A large amount of orders with very small Sales!
-```
-
-
-```{r }
-summary(data$Quantity)
-```
-
-```{r fig.cap= "Boxplot of quantity values"}
 boxplot(data$Quantity)
-``` 
+```
+```{r }
+summary(data$Sales)
+
+```
 
 
 ```{r fig.cap= "Plot of quantity distribution of transaction. There is a very skewed distribution where most of the orders have small number of items and there are not a lot of outliers" }
 ggplot(data = data, mapping = aes(x = Quantity)) +
   geom_histogram(binwidth = 0.5,fill="green4")
+summary(data$Quantity)
 ```
 
-```{r fig.cap= "Boxplot of discount values. A strange looking box dataplot - median & 3rd quantile are the same (0.2) and not many orders have high discounts"}
-summary(data$Discount)
+```{r fig.cap= "From top: a) Boxplot of discount values. A strange looking box dataplot - median & 3rd quantile are the same (0.2) and not many orders have high discounts. b)Boxplot of profit. Most of the profits are outside of the box - but most of them clustered close to the box(not with so extreme values "}
+par(mfrow=c(2,1))
 boxplot(data$Discount)
-
+boxplot(data$Profit)
+summary(data$Discount)
+summary(data$Profit)
 ```
 ```{r fig.cap="Plot of transactions involving discounts. Sales transactions mostly do not involve discounts."}
 ggplot(data = data) +
@@ -190,10 +179,6 @@ ggplot(data = data) +
                  binwidth = 0.05,
                  xlab="Discount",
                  fill="green4")
-```
-
-```{r fig.cap = "Boxplot of profit. Most of the profits are outside of the box - but most of them clustered close to the box(not with so extreme values"}
-boxplot(data$Profit)
 ```
 
 ```{r fig.cap= "Profit distribution from transactions"}
@@ -205,9 +190,6 @@ labs(title=" Profit Distribution")
 #most of the orders have profits ~1000 (or ~800?), and ~ -800
 ```
 
-```{r}
-summary(data$Profit)
-```
 
 Remove the dot in the column names and replace with "_" to make variable names easier to handle:
 
@@ -246,43 +228,35 @@ summary(data$Order_Date)
 Basically this dataset covers transactions ranging from 2014-01-03 to 2017-12-30.
 
 
-```{r}
+```{r fig.cap = "Barchart of product category versus count of transactions. Most type of products sold belong to the Office supplies category."}
 ggplot(data = data) +
   geom_bar(mapping = aes(x = Category),fill="green4")
 ```
-Most type of products sold belong to the Office supplies category.
 
 
-```{r}
+```{r fig.cap="Barchart of product subcategory versus transaction count."}
 ggplot(data = data) +
   geom_bar(mapping = aes(y = `Sub_Category`), fill="green4")
 ```
 
-```{r}
+```{r warning=FALSE, fig.cap="Histogram of sales transactions. Most sales are very few items (<500)."}
 ggplot(data = data, mapping = aes(x = Sales)) +
   xlim(0, 5000) +
   geom_histogram(binwidth = 5,fill="green4")
 ```
-Most sales are very few items (<500).
+
 
 Visualise sales transactions by Region over time (order date).
-```{r}
+```{r fig.cap= "Sales over time (order date), coloured by region"}
  ggplot(data, aes(Order_Date, Sales,color=Region)) +
-      geom_line() 
+      geom_line()+
+  ylim(0,5000)
 ```
 
-Let's zoom in a little bit - Visualise sales transactions by Region over time (order date).
-
-```{r}
- ggplot(data, aes(Order_Date, Sales,color=Region)) +
-      geom_line() +
-      ylim(0,5000)
-
-```
 
 How does profit change with sub-category?
-```{r}
- #density plot where the count is standardized,area under each frequency is 1 
+```{r fig.cap= "Density plot of sales by sub-category of products"}
+ #density plot where the count is standardized, area under each frequency is 1 
 ggplot(data = data, mapping = aes(x = Sales, y = ..density..)) +   
   geom_freqpoly(mapping = aes(colour = Sub_Category), binwidth = 500)
 ```
@@ -290,24 +264,17 @@ It looks like some categories of items ie. supplies or accessories have negative
 
 
 How does sales vary across sub category?
-```{r}
+```{r fig.cap="Boxplot of sales by sub category of products. Machines and copiers generate the highest sales amounts."}
 ggplot(data = data, mapping = aes(x = Sales, y = `Sub_Category` )) +
   geom_boxplot()
 ```
 
-```{r}
+```{r fig.cap="Bar chart of transactions by ship mode. Most transactions are shipped via Standard Class method."}
 ggplot(data =data, mapping = aes(x = Ship_Mode)) +
   geom_bar()
 
 ```
-Most transactions are shipped via Standard Class method.
 
-
-```{r}
-ggplot(data)+
-geom_histogram(mapping=aes(x=Sales),fill="sienna3")+
-coord_cartesian(ylim = c(0, 100))+labs(title=" Sales Distribution")
-```
 ```{r fig.cap= "Plot of profit versus discount"}
 ggplot(data) +
 geom_point(mapping = aes(x = Profit, y = Discount),colour="violetred3")+
@@ -315,7 +282,7 @@ labs(title=" Profit Discount Distribution")
 #Most of the orders were placed without any discounts or with 20% off
 ```
 ### Sales Profit
-```{r}
+```{r fig.cap = "Scatterplot of sales vs profit."}
 ggplot(data) +
 geom_point(mapping = aes(x = Sales, y = Profit),colour="limegreen")+
 labs(title=" Sales Profit Distribution")
@@ -330,17 +297,7 @@ data %>%
 
 ```
 
-
 ```{r}
-#total category and subcategory 
-
-count_category<-unique(data$Category)
-length(count_category)
-
-
-count_subcategory<-unique(data$Sub_Category)
-length(count_subcategory)
-
 data %>% 
   distinct(Category, Sub_Category)
 
@@ -358,7 +315,7 @@ superstore_sales<-as_tibble(superstore_sales)
 
 
 Transactions by region:
-```{r}
+```{r fig.cap ="Pie chart which shows proportions of transactions from the different regions." }
 bar <- ggplot(data = data) + 
   geom_bar(
     mapping = aes(x = Region, fill = Region), 
@@ -370,7 +327,7 @@ bar <- ggplot(data = data) +
 
 bar + coord_polar()
 ```
-The above chart shows proportions of transactions from the different regions.
+
 
 
 ```{r, echo=FALSE, warning=FALSE}
@@ -379,7 +336,7 @@ names(data)[names(data)=="Sub-Category"] <- "Sub_Category"
 ```
 
 
-```{r}
+```{r fig.cap = "Pie chart of product sub categories in the south region" }
 #Extracting the rows for South region, and sub-categories:
 South <- data %>% 
   select(Region, Sub_Category) %>%
@@ -400,9 +357,7 @@ bar + coord_polar()
 In the South, most transactions are Binders, Paper, or Furnishings. For the other regions, the distribution of product sub categories are very similar to the distribution of product subcategories in the south. 
 
 
-- **bar charts of profits/sales by region**  
-
-```{r fig.cap= "Total sales per region."}
+```{r echo= FALSE, fig.cap= "Total sales per region."}
 ggplot(data = data) + 
   geom_bar(mapping = aes(x = Region, fill = Sales)) +
   ggtitle("Total Sales by region") +
@@ -411,7 +366,7 @@ ggplot(data = data) +
 ```
 
 
-```{r}
+```{r echo=FALSE, fig.cap= "Total profit by region"}
 ggplot(data = data) + 
   geom_bar(mapping = aes(x = Region, fill = Profit))+
   ggtitle("Total Profit by region")+
@@ -429,7 +384,7 @@ num_data <- data[numeric_vars]
 ```
 
 We'll use a correlation matrix to look at the relationship between numeric variables:
-```{r}
+```{r fig.cap= "Correlation matrix of numeric variables"}
 cor(num_data)
 ```
 ```{r}
@@ -444,9 +399,6 @@ corrplot(cor_result$r, type = "upper", order = "hclust", tl.col = "black", tl.sr
 Discount is negatively correlated with profit, whereas sales is positively correlated with profit. The time between order date and
 ship date (diff_in_days) is not correlated with sales, quantity, discount, or profit.
 
-Since the difference in days between Order date and Ship date has 0 correlation with the other variables, let's drop diff_in_days 
-for the K-means clustering analysis. 
-
 
 ## Data Preparation
 
@@ -456,20 +408,17 @@ for the K-means clustering analysis.
 data1 <- data
 ```
 
-drop column Row ID because it is not necessary; it is the row number from the original excel file. The country variable is also not needed because all the values are United states. 
+drop column Row ID because it is not necessary; it is the row number from the original excel file. The country variable is also not needed because all the values are United States. 
 Customer_Name and Customer_ID give redundant information. So we will drop the Customer_Name column and keep only the Customer_ID column.
 ```{r}
 data1[,c("Row_ID","ï__Row_ID", "Country", "Customer_Name")]<-NULL
 ```
 
 
-
 ```{r}
 head(data1)
 
 ```
-
-
 
 
 # Modelling
@@ -529,7 +478,7 @@ within a given group are not very similar to each other.
 
 The factoextra package contains a function called fviz_cluster() which can be used to visualize kmeans clusters. The input required is the original dataset, and the kmeans results. These are used to produce plots which show points that represent observations.
 
-```{r}
+```{r fig.cap= "Plot of Kmeans clustering of numeric variables from Superstore transactions dataset, for k=3"}
 fviz_cluster(results_kmeans, data = data1[,(15:18)],
              palette = c("#2E9FDF", "#E495A5", "#E7B800"), 
              geom = "point",
@@ -568,7 +517,7 @@ head(eigenvalue)
 
 Variance of a group indicates how different members of a group are. Higher variance means greater dissimilarity within a group.
 
-```{r}
+```{r fig.cap = "Alternate way to plot kmeans clustering for Superstore numeric columns, k=3, with observations labelled by region"}
 #To visualize the k-means clusters:
 
 ggscatter(
@@ -586,12 +535,9 @@ The clustering plot shows that the groups are very close together, and overlap s
 
 ## Evaluation of Kmeans Clustering 
 
-(https://towardsdatascience.com/clustering-analysis-in-r-using-k-means-73eca4fb7967)
+The within sum of squares (Withinss) is a value that represents the level of dissimilarity within a group. The higher the withinss, the greater the dissimilarity within the group (Foncesca, 2019).
 
-The within sum of squares (Withinss) is a value that represents the level of dissimilarity within a group. The higher the withinss, the greater the dissimilarity within the group.
-
-(Foncesca, 2019)
-```{r, warning = FALSE}
+```{r, warning = FALSE, fig.cap= "Within sum of squares plot for kmeans clustering of Superstore numeric data"}
 #To plot a within sum of squares plot for a range of different number of initial K-means centroids:
 #This function is modified from: (https://towardsdatascience.com/clustering-analysis-in-r-using-k-means-73eca4fb7967)
 
@@ -609,7 +555,7 @@ wssplot(data1[,(15:18)], nc = 20)
 
 ```
 
-From the Within sum of squares plot, the optimal number of clusters is around 4. when the number of groups (k) initially increases 1 to 4, the error measures (sum of squares within a group) starts to decrease. After around k=4 or k=5, the sum or sqaures within a group error value starts to mostly flatten. 
+From the Within sum of squares plot, the optimal number of clusters is around 4. When the number of groups (k) initially increases 1 to 4, the error measures (sum of squares within a group) starts to decrease. After around k=4 or k=5, the sum or sqaures within a group error value starts to mostly flatten. 
 
 The main purpose is to find a number of initial groups which achieves some fair amount of compactness (or similarity) between observations within a group. When k is too high, each cluster starts to represent individual points, whereas when k is too low, the observations may not 
 be in the right cluster. 
@@ -667,7 +613,7 @@ variance.percent <- eigenvalue$variance.percent
 head(eigenvalue)
 ```
 
-```{r}
+```{r fig.cap ="K means clusters of Superstore numeric data for k=4. Observations are labeled by region."}
 ggscatter(
   ind.coord, x = "Dim.1", y = "Dim.2", 
   color = "cluster", palette = brewer.pal(n = 8, name = "Dark2"), ellipse = TRUE, ellipse.type = "convex",   #add concentration ellipses
@@ -696,19 +642,16 @@ Si <0 means the observation is wrongly clustered.
 
 Si = 0 means the observation is between 2 clusters. 
 
-```{r}
+```{r fig.cap="Sihouette width plot of kmeans clustering of Superstore numeric data, for k=4"}
 library(cluster)
 library(factoextra)
 
 sil <- silhouette(clustering_results_4$cluster, dist(data1[,(15:18)]))
 fviz_silhouette(sil)
 ```
+From the silhouette width plot, it looks like cluster 4 is well clustered since the average silhouette width is 0.37 (a positive value). However, cluster 2 and 3 have negative average silhouette widths which may indicate some observations are wrongly clustered. Another observation is that the size of the 4 clusters are not very similar, with cluster 4 being the biggest (with 6085 observations) while cluster 1 only contains 27 observations. One of the assumptions of K-means clustering is that the size of the clusters should be similar, in order to calculate the boundaries of the clusters. 
 
-Compute PCA and extract individual components and extract individual components.
-
-
-
-## Anomaly Detection using Local Outlier Factor Algorithm  -Nearest neighbour method 
+## Anomaly Detection Method 1 - using Local Outlier Factor Algorithm  -Nearest neighbour method 
 
 LOF uses density based methods to calculate degree of outlying. LOF is a unsupervised anomaly detection technique, every point in the dataset is assigned LOF score based on the threshold value it classify the data points as outlier or non-outlier.
 
@@ -771,6 +714,28 @@ col[lof_outliers] <- "red"
 pairs(superstore_lof, pch=pch, col=col)
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ### Re-running K-means after removing outliers identified with the Local Outlier Factor 
 
@@ -1032,7 +997,7 @@ plot(1:8, sil_width,
      ylab = "Silhouette Width")
 lines(1:8, sil_width)
 ```
-2 clusters has the highest silhouette width, while 4 has the second highest. Higher silhouette width is generally better.  2 Clusters may be too simple, so We will pick k = 4.
+2 clusters has the highest silhouette width, while 4 has the second highest. Higher silhouette width is generally better.  2 Clusters may be too simple, so we will pick k = 4.
 
 To look at a summary of each of the clusters:
 
@@ -1047,20 +1012,11 @@ pam_results_4$the_summary
 ```
 The first cluster has the majority values: ship mode is Second Class , segment is Consumer , City is San Francisco/other, State is California/other, sub category is furnishings. The mean difference in days between order date and ship date is 2.358 days, the mean value for Sales is $216.38, the mean quantity is 3.699, the discount mean is $0.1113, profit mean is $32.
 
-cluster 1 is made of second class shippping, Consumer segment x San Franciso x California x furnishings. 
-
-
 For cluster 2, the ship mode is mostly standard class, segment is mostly consumer, city is mostly Los Angeles/other, State is mostly California/Other, subcategory is mostly Binders/other. The mean difference in days between order date and ship date is 4.7 days, the mean sales $225.91, mean quantity is 3.48, discount is 0.2148, and profit mean is $19.67.
-
-Cluster 2 is made of standard class shipping x consumer segment x Los Angeles x California x Binders. 
 
 For cluster 3, the main ship mode is First class, the segment is mostly Home Office, the most common city is Philadelphia/Other, the most common State is Pennsylvania/Other,  and the most common subcategory is paper/other. For numeric variables, the mean difference in days between order date and ship date is 4.04 days, the mean sales $216.94, mean quantity is 3.72, mean discount is 0.2065, and mean profit is $10.08. 
 
-Cluster 3 is First class shipping x Home Office segment x Philadelphia x Pennsylvania x Paper. Cluster 3 has the lowest mean profit of the 4 clusters. 
-
 For cluster 4, the main ship mode is First class, the most common segment is Corporate, New York City/Other is the most common city, New York State/Other is the most common state, and the most common subcategory is paper. For the numeric features, the mean difference in days between order date and ship date is 4.25 days, the mean sales is $253.84, and mean quantity is 3.83, mean discount is 0.086, mean profit is $49.05.
-
-Cluster 4 is made of First Class shipping x Corporate segment x New York City x New York State x Paper. Cluster 4 has the highest mean sales amount and mean profit, with lowest mean discount. 
 
 
 We can now visualise the clusters in lower dimensional space with tSNE (t-Distributed Stochastic Neighbor Embedding) which can be used for dimensionality reduction.
@@ -1192,6 +1148,10 @@ ggplot(aes(x = X, y = Y), data = tsne_data) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
+## Evaluating the consistency within Clusters of Data
+Silhouette coefficient can be used to compare the average distance to observations within the same cluster, to the average distance to observations in other clusters. 
+
+High silhouette coefficient means that the observation is well clustered, while a low silhouette coefficient may indicate outliers.
 
 We also tried k=5 for k-medoids clustering. For k= 5, The average silhouette width per cluster were:
 [1] 0.05349182 0.10906323 0.04114758 0.08911682 0.07800729. The average silhouette width of the total data set for k=5 is 0.08049662, which is less than the silhouette width for k=4 (0.08368581). The optimal number of clusters is k=4, since it maximises the average silhouette width. Higher silhouette width values indicate better quality clustering (Datanova, 2018). We also plotted the clustering result using the gower distance metric and t-SNE for dimensionality reduction. However, the plot shows there is still a great deal of overlap between the clusters. 
@@ -1224,16 +1184,13 @@ Plotting the clusters found using Factor Analysis of Mixed Data (FAMD).
     
   ) 
 ```
-## Evaluating the consistency within Clusters of Data
-Silhouette coefficient can be used to compare the average distance to observations within the same cluster, to the average distance to observations in other clusters. 
-
-High silhouette coefficient means that the observation is well clustered, while a low silhouette coefficient may indicate outliers.
 
 
 ## Deployment
 The clustering model and anomaly detection app are deployed in shiny app. The interactive applications accepts inputs from the user and display accordingly. The url for application is below  
-[Clustering ]( https://crystalzhu72.shinyapps.io/MixedDataClustering/)
-[Anomaly Detection ]()
+[Clustering - https://crystalzhu72.shinyapps.io/MixedDataClustering/]( https://crystalzhu72.shinyapps.io/MixedDataClustering/)
+
+[Anomaly Detection - https://mlgroupb.shinyapps.io/anomaly/](https://mlgroupb.shinyapps.io/anomaly/)
 
 
 ## Responsible ML Framework
@@ -1244,32 +1201,61 @@ In K means clustering, the goal is to have high similarity within each cluster, 
 
 For K-means clustering, for k=4 (4 clusters), when we perform clustering on the data without removing the outliers first, the Within cluster sum of squares by cluster: is 3315.203, 4284.643, 7571.058, 3614.724, and the between_SS / total_SS =  53.0 %. In comparison, when outlier transactions are first removed using the Local Outlier Factor method, for k=4, the Kmeans Within cluster sum of squares by cluster values are: 5391.896, 3363.327, 2252.744, 2215.088 and between_SS / total_SS =  56.7 %. This shows that by removing the outlier transactions first before performing K-means clustering, there is better clustering with a greater between_SS / total_SS percentage. 
 
+For clustering with K-medoids, using the gower distance metric is useful when the dataset includes both numeric and categorical data. In this project, we found 4 optimal clusters for different Superstore customers:
+cluster 1 is made of second class shippping, Consumer segment x San Franciso x California x furnishings. 
+Cluster 2 is made of standard class shipping x consumer segment x Los Angeles x California x Binders.
+Cluster 3 is First class shipping x Home Office segment x Philadelphia x Pennsylvania x Paper. Cluster 3 has the lowest mean profit of the 4 clusters. 
+Cluster 4 is made of First Class shipping x Corporate segment x New York City x New York State x Paper. Cluster 4 has the highest mean sales amount and mean profit, with lowest mean discount. 
+
+The Superstore can now use the commonalities for customers within these clusters to adjust product offerings on their website in order to meet customer needs. For example, for cluster 4, the customers are generally from New York and mainly buy corporate type products with the highest mean sales amount of $253.84. Using this data, the Superstore can have their website show more business  related products which may be more expensive than products from other segments. 
+
+When evaluating the clustering using the t-SNE method to examine the clusters in 2 dimensions, we can see that there is still some overlap between the different clusters. We also evaluated the clustering by examining the silhouette width, by choosing the optimal number of clusters with maximal silhouette width. In our case, the optimal number of clusters of k=4 produced a silhouette width of 0.08368581. 
+
+### Ways to Improve Clustering Results in Future
+
+#### For Kmeans clustering which uses Euclidean distance:
+To improve the clustering results we may have to perform some feature engineering to reduce observations which have values of 0.5 in the similarity matrix. Similarity is distance based, where similarity measures have value in [0, 1] where 0 is no similarity and 1 is identical. TO reduce the noise due to observations having values of 0.5 on the similarity matrix, we can use the loss metric to get the 0.5 similarity values closer to either 0 or 1 (Sinclair, 2018). 
+
+The equation for the loss metric is below: 
+![Image caption Source:https://towardsdatascience.com/improving-clustering-performance-using-feature-weight-learning-d65d4fec77cb](images/loss_metric.png)
+
+where 1 = base weights, p = resulting fuzzy partition matrix which is a product of the weights used in the euclidean distance function between points p and q. 
+
+Afterwards, perform Gradient Descent on the loss function to get the local minimum of the function, and continuously update the weights until the maximum number of iterations are met or the function converges (Sinclair, 2018). By improving the feature weights, clusters will be easier to identify.
+
+
+
 
 
 
 
 ## References
 
+(2017).Exploring Assumptions of K-means Clustering using R. Retrieved from  https://www.r-bloggers.com/2017/08/exploring-assumptions-of-k-means-clustering-using-r/
+
 Alboukadel .K-Means Clustering Visualization in R: Step By Step Guide. Retrieved from: https://www.datanovia.com/en/blog/k-means-clustering-visualization-in-r-step-by-step-guide/
 
-K-means clustering with tidy data principles. Retrieved from: https://www.tidymodels.org/learn/statistics/k-means/
-
-Fonseca, Clustering Analysis in R using K-means. Retrieved from:  https://towardsdatascience.com/clustering-analysis-in-r-using-k-means-73eca4fb7967
-
-Manimaran, Clustering Evaluation strategies. Retrieved from: https://towardsdatascience.com/clustering-evaluation-strategies-98a4006fcfc
-
-Detect Anomalies in Time Series Using Anomalize Package In R. Retrieved from: https://www.analyticsvidhya.com/blog/2020/12/a-case-study-to-detect-anomalies-in-time-series-using-anomalize-package-in-r/
-
-Gama, K-Medoids in R: Algorithm and Practical Examples. Retrieved from:https://www.datanovia.com/en/lessons/k-medoids-in-r-algorithm-and-practical-examples/
+Li, C.C., Detecting Outlier by Local Outlier Factor and Random Forest. Retrieved from: https://rstudio-pubs-static.s3.amazonaws.com/216270_ccd62999b6504c22a390bb39fee22f39.html
 
 Dbscan. Retrieved from:https://www.rdocumentation.org/packages/dbscan/versions/1.1-5/topics/lof
 
+Arkaghosh, N. (2020). Detect Anomalies in Time Series Using Anomalize Package In R. Retrieved from: https://www.analyticsvidhya.com/blog/2020/12/a-case-study-to-detect-anomalies-in-time-series-using-anomalize-package-in-r/
+
+Filaire, T. (2018). Clustering on mixed type data. Retrieved from: https://towardsdatascience.com/clustering-on-mixed-type-data-8bbd0a2569c3
+
+Fonseca, L. (2019). Clustering Analysis in R using K-means. Retrieved from:  https://towardsdatascience.com/clustering-analysis-in-r-using-k-means-73eca4fb7967
+
+Gama, K-Medoids in R: Algorithm and Practical Examples. Retrieved from:https://www.datanovia.com/en/lessons/k-medoids-in-r-algorithm-and-practical-examples/
+
 Kassambara, Riad, & Visitor, FAMD - Factor Analysis of Mixed Data in R: Essentials. Retrieved from:http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/115-famd-factor-analysis-of-mixed-data-in-r-essentials/#comments-list (Kassambara, 2017)
 
-Filaire , Clustering on mixed type data. Retrieved from: https://towardsdatascience.com/clustering-on-mixed-type-data-8bbd0a2569c3
+K-means clustering with tidy data principles. Retrieved from: https://www.tidymodels.org/learn/statistics/k-means/
 
-Mayer, Using OutForest. Retrieved from: https://cran.r-project.org/web/packages/outForest/vignettes/outRanger.html
+Manimaran (2019). Clustering Evaluation strategies. Retrieved from: https://towardsdatascience.com/clustering-evaluation-strategies-98a4006fcfc
 
-Cheng-Chung Li, Detecting Outlier by Local Outlier Factor and Random Forest. Retrieved from: https://rstudio-pubs-static.s3.amazonaws.com/216270_ccd62999b6504c22a390bb39fee22f39.html
+Mayer, M. (2021). Using OutForest. Retrieved from: https://cran.r-project.org/web/packages/outForest/vignettes/outRanger.html
 
-Nwanganga, F. and Chapple, M. (2020). Practical Machine Learning in R. Indianapolis, Indiana: Wiley & Sons.
+Nwanganga, F. and Chapple, M. (2020). Practical Machine Learning in R. Indianapolis, Indiana: Wiley & Sons.-
+
+Sinclair, C. (2018). Improving Clustering Performance Using Feature Weight Learning. Retrieved from https://towardsdatascience.com/improving-clustering-performance-using-feature-weight-learning-d65d4fec77cb
+
