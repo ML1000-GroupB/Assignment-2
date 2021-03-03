@@ -1,9 +1,10 @@
 ---
 title: "ML 1000 Assignment 2"
 author: "by Anupama r.k, Queenie Tsang, Crystal (Yunan) Zhu"
-date: "21/02/2021"
+date: "02/03/2021"
 output:
-  pdf_document: default
+  pdf_document: 
+        fig_caption: yes
   html_document: default
 ---
 
@@ -52,6 +53,7 @@ library(FactoMineR)
 library(NbClust)
 library(RColorBrewer)
 library(ggfortify)
+library(knitr)      #for adding figure captions
 ```
 ```{r, echo= FALSE, message = FALSE, warning = FALSE}
 superstore<- read_excel("US_Superstore_data.xls")
@@ -75,7 +77,6 @@ data_superstore
 
 
 
-
 ```{r, echo=FALSE,message=FALSE,warning=FALSE}
 
 data=read.csv("US_Superstore_data.csv")
@@ -84,7 +85,10 @@ data$Ship.Date=as.Date(data$Ship.Date)
 
 diff_in_days=as.numeric(data$Ship.Date-data$Order.Date)
 data=cbind(data,diff_in_days)
+```
 
+# Exploratory Data Analysis  
+```{r}
 #check dup
 #data %>% distinct()
 data_nodup=distinct(data,data[,1:21], keep_all=TRUE)[,-22]
@@ -101,23 +105,16 @@ missing_values
 #no missing values
 data_miss=data[!complete.cases(data),]
 ```
-
+There are no missing values in the dataset.
 
 
 Get a general idea of the data set.  
-
 
 ```{r}
 length(unique(data$Customer.ID))
 #793 unique customer IDs
 length(unique(data$Customer.Name))
-#793 unique customer names - drop one of these two vars
-
-
-length(unique(data$Order.Date))
-#1237 unique order dates
-length(unique(data$Ship.Date))
-#1334 unique ship dates - more unique ship dates than order dates - orders made on the same day were shipped in different dates??
+#793 unique customer names - We can drop one of these two variables since they are redundant.
 
 length(unique(data$Segment))
 unique(data$Segment)
@@ -138,10 +135,6 @@ length(unique(data$Postal.Code))
 unique(data$Region)
 #only 4 regions
 
-unique(data$Category)
-#only 3 categories - "Furniture" "Office Supplies" "Technology"
-
-length(unique(data$Sub.Category))
 unique(data$Sub.Category)
 #17 sub-categories 
 
@@ -149,34 +142,77 @@ length(unique(data$Product.Name))
 #1850 product names
 length(unique(data$Product.ID))
 #1862 product IDs - potential redundant variables!
+```
 
+
+```{r, fig.cap = "Histogram of time difference between order date and ship date. The time difference between order date and ship date typically takes 4 days." }
 hist(data$diff_in_days)
-#The time difference between order date and ship date typically takes 4 days. 
+```
 
+```{r}
 summary(data$Sales)
+```
+
+```{r fig.cap ="Boxplot of sales showing many outliers."}
 boxplot(data$Sales)
+```
+
+```{r fig.cap= "Histogram of sales values."}
 hist(data$Sales)
-#a large amount of orders with very small Sales!
+#  A large amount of orders with very small Sales!
+```
 
 
+```{r }
 summary(data$Quantity)
-boxplot(data$Quantity)
-#not many outliers - the #of products in each order is stable?
-hist(data$Quantity)
-#very skewed distribution - most of the orders have small #of items
+```
 
+```{r fig.cap= "Boxplot of quantity values"}
+boxplot(data$Quantity)
+``` 
+
+```{r fig.cap = "Histogram of quantity values"}
+#not many outliers - the number of products in each order is stable?
+hist(data$Quantity)
+#there is a very skewed distribution where most of the orders have small number of items
+```
+
+```{r fig.cap= "Plot of quantity distribution of transaction" }
+ggplot(data = data, mapping = aes(x = Quantity)) +
+  geom_histogram(binwidth = 0.5,fill="green4")
+```
+
+```{r fig.cap= "Boxplot of discount values"}
 summary(data$Discount)
 boxplot(data$Discount)
-#a strange looking box dataplot? - median & 3rd quantile are the same (0.2) - not many orders have high discounts
-hist(data$Discount)
-#most of the orders were placed without any discounts or with 20% off
+#a strange looking box dataplot - median & 3rd quantile are the same (0.2) - not many orders have high discounts
 
+```
+```{r fig.cap="Plot of transactions involving discounts"}
+ggplot(data = data) +
+  geom_histogram(mapping = aes(x = Discount), 
+                 binwidth = 0.05,
+                 xlab="Discount",
+                 fill="green4")
+```
+Sales transactions mostly do not involve discounts.
+
+```{r fig.cap = "Boxplot of profit"}
 summary(data$Profit)
 boxplot(data$Profit)
 #most of the profits are outside of the box - but most of them clustered close to the box(not with so extreme values)
-hist(data$Profit)
+
+```
+
+```{r fig.cap= "Profit distribution from transactions"}
+ggplot(data)+
+geom_histogram(mapping=aes(x=Profit),fill="green3")+
+coord_cartesian(ylim = c(0, 100))+
+labs(title=" Profit Distribution")
+
 #most of the orders have profits ~1000 (or ~800?), and ~ -800
 ```
+
 
 
 Remove the dot in the column names and replace with "_" to make variable names easier to handle:
@@ -189,22 +225,21 @@ colnames(data)
 ```
 
 
-# Exploratory Data Analysis  
-
-
 Plot Sales in relation to Order Date:  
 
-
-```{r, echo=FALSE, warning=FALSE}
+```{r, echo=FALSE, warning=FALSE, fig.cap="Sales by order date"}
 ggplot(data = data) +
   geom_point(mapping = aes(x = Order_Date, y = Sales), xlab="Order Date", ylab="Sales")
 ```
+
+
+
 Plot Profit in relation to Order Date:
 ```{r}
 ggplot(data = data) +
   geom_point(mapping = aes(x = Order_Date, y = Profit), xlab="Order Date", ylab="Profit")
 ```
-Some outliers for certain days
+There are some outliers for certain days.
 
 
 ```{r}
@@ -237,22 +272,6 @@ ggplot(data = data, mapping = aes(x = Sales)) +
   geom_histogram(binwidth = 5,fill="green4")
 ```
 Most sales are very few items (<500).
-
-```{r}
-ggplot(data = data, mapping = aes(x = Quantity)) +
-  geom_histogram(binwidth = 0.5,fill="green4")
-```
-
-
-```{r}
-ggplot(data = data) +
-  geom_histogram(mapping = aes(x = Discount), 
-                 binwidth = 0.05,
-                 xlab="Discount",
-                 fill="green4")
-```
-Sales transactions mostly do not involve discounts.
-
 
 Visualise sales transactions by Region over time (order date).
 ```{r}
@@ -294,19 +313,14 @@ Most transactions are shipped via Standard Class method.
 
 ```{r}
 ggplot(data)+
-geom_histogram(mapping=aes(x=Profit),fill="green3")+
-coord_cartesian(ylim = c(0, 100))+
-labs(title=" Profit Distribution")
-```
-```{r}
-ggplot(data)+
 geom_histogram(mapping=aes(x=Sales),fill="sienna3")+
 coord_cartesian(ylim = c(0, 100))+labs(title=" Sales Distribution")
 ```
-```{r}
+```{r fig.cap= "Plot of profit versus discount"}
 ggplot(data) +
 geom_point(mapping = aes(x = Profit, y = Discount),colour="violetred3")+
 labs(title=" Profit Discount Distribution")
+#Most of the orders were placed without any discounts or with 20% off
 ```
 ### Sales Profit
 ```{r}
@@ -351,8 +365,6 @@ superstore_sales<-as_tibble(superstore_sales)
 
 
 
-
-
 Transactions by region:
 ```{r}
 bar <- ggplot(data = data) + 
@@ -393,78 +405,18 @@ bar <- ggplot(data = South) +
 bar + coord_polar()
 
 ```
-In the South, most transactions are Binders, Paper, or Furnishings.
-
-```{r}
-#Extracting the rows for Central region, and sub-categories:
-Central <- data %>% 
-  select(Region, Sub_Category) %>%
-  filter(Region == "Central")
-
-bar <- ggplot(data = Central) + 
-  geom_bar(
-    mapping = aes(x = Sub_Category, fill = Sub_Category), 
-    show.legend = FALSE,
-    width = 1
-  ) + 
-  theme(aspect.ratio = 1) +
-  labs(x = NULL, y = NULL)
-
-bar + coord_polar()
-
-```
-
-```{r}
-#Extracting the rows for West region, and sub-categories:
-West <- data %>% 
-  select(Region, Sub_Category) %>%
-  filter(Region == "West")
-
-bar <- ggplot(data = West) + 
-  geom_bar(
-    mapping = aes(x = Sub_Category, fill = Sub_Category), 
-    show.legend = FALSE,
-    width = 1
-  ) + 
-  theme(aspect.ratio = 1) +
-  labs(x = NULL, y = NULL)
-
-bar + coord_polar()
-
-```
-
-```{r}
-#Extracting the rows for East region, and sub-categories:
-East <- data %>% 
-  select(Region, Sub_Category) %>%
-  filter(Region == "East")
-
-bar <- ggplot(data = East) + 
-  geom_bar(
-    mapping = aes(x = Sub_Category, fill = Sub_Category), 
-    show.legend = FALSE,
-    width = 1
-  ) + 
-  theme(aspect.ratio = 1) +
-  labs(x = NULL, y = NULL)
-
-bar + coord_polar()
-
-```
+In the South, most transactions are Binders, Paper, or Furnishings. For the other regions, the distribution of product sub categories are very similar to the distribution of product subcategories in the south. 
 
 
 - **bar charts of profits/sales by region**  
 
-```{r}
+```{r fig.cap= "Total sales per region."}
 ggplot(data = data) + 
   geom_bar(mapping = aes(x = Region, fill = Sales)) +
   ggtitle("Total Sales by region") +
   ylab("Sales")
 
 ```
-Total sales per region.
-
-
 
 
 ```{r}
@@ -528,11 +480,11 @@ head(data1)
 
 
 
-## Model
+# Modelling
 
+## Method 1: Clustering with Kmeans without removing outliers
 
-
-For this K-means clustering we will use the numeric variables only: which are sales, quantity, discount, profit (columns 15 - 18). K means clustering is partitional, exclusive and complete type of clustering approach, meaning the clustering is independent, (not nested within each other), and every observation has to be placed inside a cluster (Nwanganga and Chapple, 2020).
+For this K-means clustering we will use the numeric variables only: which are sales, quantity, discount, profit (columns 15 - 18). K means clustering is a partitional, exclusive and complete type of clustering approach, meaning the clustering is independent, (not nested within each other), and every observation has to be placed inside a cluster (Nwanganga and Chapple, 2020).
 K means clustering is affected by the starting assignment points, so we will try with 25 different starting assignments (nstart = 25), and see which ones work the best.
 
 
@@ -581,7 +533,7 @@ Available components:
 The results of this clustering indicate that the within cluster sum of squares by cluster is 37.0 % which means that the observations
 within a given group are not very similar to each other. 
 
-# Plot K-means
+## Plot K-means
 
 The factoextra package contains a function called fviz_cluster() which can be used to visualize kmeans clusters. The input required is the original dataset, and the kmeans results. These are used to produce plots which show points that represent observations.
 
@@ -595,7 +547,7 @@ fviz_cluster(results_kmeans, data = data1[,(15:18)],
 
 ```
 
-Reduce dimensions using Principal Component Analysis.
+## Reduce dimensions using Principal Component Analysis.
 
 ```{r}
 results_pca <- prcomp(data1[,(15:19)], scale=TRUE)
@@ -640,7 +592,7 @@ ggscatter(
 The clustering plot shows that the groups are very close together, and overlap slightly. The clusters could be further apart with some tuning by changing the number of clusters (k).
 
 
-## Evaluation
+## Evaluation of Kmeans Clustering 
 
 (https://towardsdatascience.com/clustering-analysis-in-r-using-k-means-73eca4fb7967)
 
@@ -649,8 +601,7 @@ The within sum of squares (Withinss) is a value that represents the level of dis
 (Foncesca, 2019)
 ```{r, warning = FALSE}
 #To plot a within sum of squares plot for a range of different number of initial K-means centroids:
-
-#This function is from:  (https://towardsdatascience.com/clustering-analysis-in-r-using-k-means-73eca4fb7967)
+#This function is modified from: (https://towardsdatascience.com/clustering-analysis-in-r-using-k-means-73eca4fb7967)
 
 #data is the input dataset, nc is the maximum number of initial centres
 
@@ -666,8 +617,7 @@ wssplot(data1[,(15:18)], nc = 20)
 
 ```
 
-From the Within sum of squares plot, the optimal number of clusters is around 5. when the number of groups (k) initially increases 1 to 6, 
-the error measures (sum of squares within a group) starts to decrease. When the number of groups is 7 or 8, the error measure starts to flatten. 
+From the Within sum of squares plot, the optimal number of clusters is around 5. when the number of groups (k) initially increases 1 to 6, the error measures (sum of squares within a group) starts to decrease. When the number of groups is 7 or 8, the error measure starts to flatten. 
 
 The main purpose is to find a number of initial groups which achieves some fair amount of compactness (or similarity) between observations within a group. When k is too high, each cluster starts to represent individual points, whereas when k is too low, the observations may not 
 be in the right cluster. 
@@ -737,11 +687,7 @@ ggscatter(
 
 ```
 
-# Clustering Validation
-
-
-(https://towardsdatascience.com/clustering-analysis-in-r-using-k-means-73eca4fb7967)
-
+## Clustering Validation
 
 Silhouette coefficient can be used to evaluate the goodness of the clustering. First, for each observation i, it calculates the dissimilarity
 between i and all the other points within the same cluster. This value is called average dissimilarity Di.
@@ -805,7 +751,7 @@ Compute PCA and extract individual components and extract individual components.
 
 
 
-### Local Outlier Factor Algorithm  -Nearest neighbour method 
+## Anomaly Detection using Local Outlier Factor Algorithm  -Nearest neighbour method 
 
 LOF uses density based methods to calculate degree of outlying. LOF is a unsupervised anomaly detection technique, every point in the dataset is assigned LOF score based on the threshold value it classify the data points as outlier or non-outlier.
 
@@ -834,7 +780,7 @@ hist(lof_scores, breaks=10)
 ```
 
 
-### Manual Evaluation
+### Manual Evaluation of Local Outlier Factor
 
 ```{r}
 #top 5 outliers transactons , the greater the lof_scores the farther the point is from the cluster. Choosing values for score greater than 2
@@ -858,11 +804,26 @@ head(x, 10)          #look at top 10 rows of x
 
 ```
 
-Keeping just the normal transactions of the superstore dataset (which are not outliers):
+## Plot LOF outliers
+
+```{r fig.cap="plot of outliers found using Local Outlier Factor algorithm"}
+pch <- rep(".", 7000)
+pch[lof_outliers] <- "+"
+col <- rep("black",7000)
+col[lof_outliers] <- "red"
+pairs(superstore_lof, pch=pch, col=col)
+
+```
+
+### Re-running K-means after removing outliers identified with the Local Outlier Factor 
+
+From here we can keep just the normal transactions of the superstore dataset (which are not outliers):
 ```{r}
 normal_transactions <-subset(superstore_unq,superstore_unq$outlier_status=="No")
 
 ```
+
+#### Data Preparation
 
 Extract just the numeric columns from the normal transactions:
 ```{r}
@@ -874,7 +835,7 @@ First scale the data since the variables are measured in different scales:
 ```{r}
 normal_transactions_scaled <- scale(normal_transactions_numeric)
 
-rownames(normal_transactions_scaled) <- normal_transactions_numeric$name     #reassign the rownames
+rownames(normal_transactions_scaled) <- normal_transactions_numeric$name     #re-assign the rownames
 ```
 
 Use PCA to scale the dimensions of the data:
@@ -911,7 +872,9 @@ From the above visualization, sales and profit tend to increase together. Quanti
 Discount is inversely related to sales, profit and quantity.
 
 
+## Determining the Optimal Number of Clusters for Kmeans Clustering
 
+### Elbow Method 
 
 Using the Elbow method to determine the optimal number of clusters involves plotting the within cluster sum of squares. The optimal number of clusters is the one located at the "bend" on the graph, where WSS is lowered. Within-cluster sum of squares (WCSS) is the degree to which items within a cluster are similar or dissimilar (Nwanganga and Chapple, 2020).
 
@@ -925,28 +888,13 @@ fviz_nbclust(normal_transactions_scaled, kmeans, method = "wss", k.max = 20) +
 ```
 The optimal number of clusters looks to be k = 4 (the elbow point). K=4 is where the curve bends, indicating the point at which increasing the number of clusters (k) does not significantly decrease the total within cluster sum of square value.  
 
+### Silhouette Method 
+
 Another method is to look at the silhouette method. The silhouette of an observation is a value that represents how closely the item is matched with other items with the the same cluster and how loosely matched it is with observations in a different cluster. 
 ```{r}
 fviz_nbclust(normal_transactions_scaled, kmeans, method = "silhouette", k.max = 24) + theme_minimal() + ggtitle("The Silhouette Plot")
 ```
 The silhouette method suggests the optimal number of clusters is 2, since k=2 corresponds to the highest average silhouette width value. 
-
-
-A third statistical approach called the gap statistic method, compares the difference between clusters created from observed data and clusters created from a randomly generated dataset called the reference dataset.  The gap statistic for a given k value is the difference in the total WCSS for the observed data and that of the reference dataset. The optimal number of clusters is denoted by the k value that yields the largest gap statistic.
-
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
-# compute gap statistic
-set.seed(123)
-gap_stat <- clusGap(normal_transactions_scaled, FUN = kmeans, nstart = 25,
-                    K.max = 10, B = 50)
-# Print the result
-print(gap_stat, method = "firstmax")
-```
-Visualize the results of the gap statistic method.
-```{r}
-fviz_gap_stat(gap_stat)
-```
-Finding the optimal number of clusters using the gap statistic. 
 
 ```{r, echo= FALSE, message=FALSE, warning= FALSE}
 #Compute K-means clustering with k=3 (3 initial distinct cluster centres) on just the normal transactions from the dataset. Nstart =25 means generate 25 initial configurations and find the average for all the centroids. 
@@ -1038,7 +986,7 @@ fviz_cluster(results_kmeans_4, data = normal_transactions_scaled,
 
 
 
-### Method 2: K-medoids
+# Method 2: Clustering with K-medoids
 
 
 Following this tutorial: https://towardsdatascience.com/clustering-on-mixed-type-data-8bbd0a2569c3
@@ -1051,14 +999,12 @@ between individuals represents the average of all feature specific distances.
 Partial dissimilarity is different depending on the type of variable: numeric or categorical. 
 
 Numeric features - partial dissimilarity is dependent on absolute difference between 2 observations (x_i and x_j), and the maximum
-range observed from all individuals. d_ij^f = |x_i - x_j|/|max_N(x) - min_N(x))| where N is the number of individuals in a dataset.
+range observed from all individuals. d_ij^f = |x_i - x_j|/|max_N(x) - min_N(x))| where N is the number of individuals in a dataset (Filaire, 2018).
 
 Categorical/Qualitative features - feature dissimilarity is equal to 1 if y_i and y_j do not have the same values, otherwise it is 0.
 
 
-One method to determine the number of clusters is by using the Silhouette coefficient. 
-
-### Data Preparation 
+## Data Preparation 
 
 For this K-medoids analysis we will omit the Region variable because there are only 4 values and the information is too broad.
 
@@ -1073,7 +1019,7 @@ data2[sapply(data2, is.character)] <- lapply(data2[sapply(data2, is.character)],
                                        as.factor)
 ```
 
-Compute Gower distance 
+Compute the Gower distance 
 ```{r}
 gower_dist <- daisy(data2, metric = "gower")
 
@@ -1090,6 +1036,8 @@ data2[which(gower_mat == min(gower_mat[gower_mat != min(gower_mat)]), arr.ind = 
 data2[which(gower_mat == max(gower_mat[gower_mat != max(gower_mat)]), arr.ind = TRUE)[1, ], ]
 
 ```
+
+## Determine the optimal number of clusters using the Silhouette Width Method
 
 Try to figure out the number of clusters to use by using the silhouette coefficient. Typically the number of clusters used is between 2 and 8. 
 
@@ -1199,7 +1147,8 @@ Clusters still look like they have some overlap, but cluster 1 is pretty well de
 input_data <- data2
 ```
 
-We also tried using k =3 with the following re
+We also tried using k =3 for k-medoids clustering. 
+
 Let's try using k=3:
 ```{r}
 gower_dist_3 = daisy(input_data, metric = "gower", type = list(logratio = 3))
@@ -1249,7 +1198,7 @@ pam_results_3 <- data2 %>%
 pam_results_3$the_summary
 ```
 
-
+## Visualise the clusters using T-SNE
 ```{r, fig.height=8, fig.width=6}
 tsne_obj <- Rtsne(gower_dist_3, is_distance = TRUE)
 
@@ -1265,11 +1214,37 @@ ggplot(aes(x = X, y = Y), data = tsne_data) +
 ```
 
 
-
 We also tried k=5 for k-medoids clustering. For k= 5, The average silhouette width per cluster were:
-[1] 0.05349182 0.10906323 0.04114758 0.08911682 0.07800729. The average silhouette width of the total data set for k=5 is 0.08049662. We also plotted the clustering result using the gower distance metric and t-SNE for dimensionality reduction. However, the plot shows there is still a great deal of overlap between the clusters. 
+[1] 0.05349182 0.10906323 0.04114758 0.08911682 0.07800729. The average silhouette width of the total data set for k=5 is 0.08049662, which is less than the silhouette width for k=4 (0.08368581). The optimal number of clusters is k=4, since it maximises the average silhouette width. Higher silhouette width values indicate better quality clustering (Datanova, 2018). We also plotted the clustering result using the gower distance metric and t-SNE for dimensionality reduction. However, the plot shows there is still a great deal of overlap between the clusters. 
 
 
+## Method 3 - Heirarchical Clustering on Principal Components Factor analysis of mixed data (FAMD) 
+
+Factor analysis of mixed data is a principal component method useful for analyzing datasets which contain numeric and categorical data. 
+
+Quantitative variables and qualitative variables are normalized to obtain a balance of the different sets of variables (Kassambra, 2017). 
+
+To run the Factor Analysis of Mixed Data method:
+```{r}
+set.seed(123)
+
+famd_fca=FAMD(input_data, ncp = 5, sup.var = NULL, ind.sup = NULL, graph = TRUE)  #ncp is the number of dimensions to keep in the results which is 5 by default, sup.var is the vector of indexes of supplementary variables, ind.sup is a vector of the indexes of supplementary individuals
+
+ind=get_famd_ind(famd_fca)$coord   #retrieve the results for the individual observations
+ind=as.data.frame(ind)
+ind$cluster=as.factor(pam_fit_4$clustering)
+
+```
+
+Plotting the clusters found using Factor Analysis of Mixed Data (FAMD). 
+```{r}
+  ggscatter(
+    ind, x = "Dim.1", y = "Dim.2",
+    color = "cluster", palette = "npg", ellipse = TRUE, ellipse.type = "convex",    #adding the concentration ellipses
+    size = 1.5,  legend = "right", ggtheme = theme_classic()
+    
+  ) 
+```
 ## Evaluating the consistency within Clusters of Data
 Silhouette coefficient can be used to compare the average distance to observations within the same cluster, to the average distance to observations in other clusters. 
 
@@ -1309,3 +1284,8 @@ https://www.rdocumentation.org/packages/dbscan/versions/1.1-5/topics/lof
 https://towardsdatascience.com/10-tips-for-choosing-the-optimal-number-of-clusters-277e93d72d92f
 
 Nwanganga, F. and Chapple, M. (2020). Practical Machine Learning in R. Indianapolis, Indiana: Wiley & Sons. 
+
+http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/115-famd-factor-analysis-of-mixed-data-in-r-essentials/#comments-list   (Kassambara, 2017)
+
+Filair, T. (2018). Clustering on Mixed Type Data - A proposed approach using R. Accessed from         https://towardsdatascience.com/clustering-on-mixed-type-data-8bbd0a2569c3
+
