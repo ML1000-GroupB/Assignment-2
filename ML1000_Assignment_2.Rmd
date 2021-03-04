@@ -10,22 +10,24 @@ output:
 
 ## Abstract
 
-Anomaly detection or Outlier detection identifies data points, events or observations that deviate from dataset's normal behavior. Anomalous data indicate critical incidents or potential opportunities. In order to take advantage of opportunities or fix costly problems anomaly detection has to be done in real time. Unsupervised machine learning models can be used to automate anomaly detection. Unsupervised anomaly detection algorithms scores data based on intrinsic properties of the dataset. Distances and densities are used to give an estimation what is normal and what is an outlier. Anomaly detection monitor is a tool developed for an online retailer to check product quality issues like profit opportunities and sales glitches. The application is built using R and Shinyapp following CRISP-DM framework. 
-
-The goal of cluster analysis in marketing is to accurately segment customers in order to achieve more effective customer marketing via personalization. A common cluster analysis method is a mathematical algorithm known as k-means cluster analysis, sometimes referred to as scientific segmentation. The clusters that result assist in better customer modeling and predictive analytics, and are also used to target customers with offers and incentives personalized to their wants, needs and preferences.
+This project uses Unsupervised machine learning methods to achieve two goals, namely Market segmentation and Anomaly detection. Clustering methods accurately segment customers  to achieve more effective marketing via personalization. This is used to target customers with offers and incentives personalized to their wants, needs and preferences. K-means clustering and K-Mediods clustering methods are used in this project for market segmentation. The resulting clusters assist in better customer modeling and predictive analytics.
+ 
+Anomaly detection or Outlier detection identifies data points, events or observations that deviate from the dataset's normal behavior. Anomalous data indicate critical incidents or potential opportunities. Outlier detection algorithms used in the project include Local Outlier factor, outForest method using Random Forest and Density based Spatial Clustering (DBSCAN) to identify potential sales opportunities. Clustering and Anomaly detection applications are built using R and Shiny app following the CRISP-DM framework.
 
 ## Business Case
 
-The Superstore is a chain of stores all over the United States with an online website where customers can view and order products. The Superstore company would like to understand more about customer preferences such as the types of products ordered, category, shipping service, quantity of items bought and whether customers use discounts. With a greater understanding of customer needs by location (city), the Superstore can then use this information to update their website. In particular, when customers select their city on the Superstore website, the site may show more products of a certain category which is commonly ordered by customers located in that area. 
-By conducting clustering on transaction data which spans over 3 years, the Superstore company find out groupings of transactions which may share similarities. For example, if a group of transactions indicate customers from a certain location are similar in typically using discounts, the Superstore may offer more promotional offers on their site for customers at that location. Another example would be if a cluster of transactions indicate typical sales are higher than other groupings, then the Superstore may display more expensive items on their site for customers in that location. 
+The Superstore is a chain of stores all over the United States with an online website where customers can view and order products. The Superstore company would like to understand more about customer preferences such as the types of products ordered, category, shipping service, quantity of items bought and whether customers use discounts, so that the company can increase their profits. With a greater understanding of customer needs by location (city), the Superstore can then use this information to update their website. In particular, when customers select their city on the Superstore website, the site may show more products of a certain category which is commonly ordered by customers located in that area. 
+By conducting clustering on transaction data which spans over 3 years, the Superstore company can find out groupings of transactions which may share similarities. For example, if a group of transactions indicate customers from a certain location are similar in typically using discounts, the Superstore may offer more promotional offers on their site for customers at that location. Another example would be if a cluster of transactions indicate typical sales are higher than other groupings, then the Superstore may display more expensive items on their site for customers in that location. 
 
 
 ## Objective
-The objective is to detect point anomalies from superstore dataset using K-NN and clustering methods. Another objective is to use clustering methods to find commonalities in the transactions in order to offer more relevant products to customers based on their location and typical sales transactions.The clustering methods used are K-means, K-medoids and the principal components method using Factor Analysis of Mixed Data (FAMD).
+The objective of the project is to develop unsupervised machine learning models for customer segmentation and anomaly detection.
+K-means, K-medoids and Principal Component Analysis using Factor Analysis of Mixed Data (FAMD) will be used for clustering.
+Local and global outliers will be detected using Local Outlier Factor(LOF), Density based Spatial Clustering(DBSCAN) and Random Forest (outForest) algorithms.  
 
 ## Data Understanding
 
-US Superstore dataset is sourced from [US uperstore dataset](https://www.kaggle.com/juhi1994/superstore) . The dataset has online orders for Superstores in U.S. from 2014-2018. Tableau community is the owner of the dataset. The dataset has 9994 records and 21 attributes.
+US Superstore dataset is sourced from US Superstore dataset found at [https://www.kaggle.com/juhi1994/superstore](https://www.kaggle.com/juhi1994/superstore). The dataset has online orders for Superstores in U.S. from 2014-2018. Tableau community is the owner of the dataset. The dataset has 9994 records and 21 attributes.
 
 ### Import data
 
@@ -54,7 +56,7 @@ library(lubridate)
 library(fpc)
 library(FactoMineR)
 library(NbClust)
-library(RColorBrewer)
+library(RColorBrewer)#for R color palettes
 library(ggfortify)
 library(knitr)      #for adding figure captions
 ```
@@ -115,10 +117,10 @@ Get a general idea of the data set.
 
 ```{r, fig.cap = "Clockwise from top left: a)Histogram of time difference between order date and ship date. The time difference between order date and ship date typically takes 4 days. b) Boxplot of sales showing many outliers. c) Histogram of sales values showing a large amount of orders with very small Sales!, d) Boxplot of quantity values. Many transactions involve very few items, with median value of 3 items"}
 par(mfrow=c(2,2))
-hist(data$diff_in_days)
-boxplot(data$Sales, main="Sales Boxplot", xlab="Sales")
-hist(data$Sales)
-boxplot(data$Quantity, main="Quantity Boxplot", xlab="Quantity")
+hist(data$diff_in_days, main="Histogram of days took to ship",xlab="Number of days")
+boxplot(data$Sales, main="Sales Boxplot")
+hist(data$Sales, main="Histogram of Sales", xlab = "Sales", breaks = 100)
+boxplot(data$Quantity, main="Quantity Boxplot")
 ```
 ```{r }
 summary(data$Sales)
@@ -132,14 +134,14 @@ ggplot(data = data, mapping = aes(x = Quantity)) +
 summary(data$Quantity)
 ```
 
-```{r fig.cap= "From top: a) Boxplot of discount values. A strange looking box dataplot - median & 3rd quantile are the same (0.2) and not many orders have high discounts. b)Boxplot of profit. Most of the profits are outside of the box - but most of them clustered close to the box(not with so extreme values "}
+```{r fig.cap= "From top: a) Boxplot of discount values which indicates a heavily skewed to right distribution in that most of the orders have discounts no more than 20%. b)Boxplot of profit, which indicates a heavy tailed distribution and the 1st and 3rd quantiles are smaller than most of the profits. But there aren’t many extreme values."}
 par(mfrow=c(1,2))
-boxplot(data$Discount, main="Discount")
-boxplot(data$Profit, main="Profit")
+boxplot(data$Discount, main="Boxplot of Discount")
+boxplot(data$Profit, main="Boxplot of Profit")
 summary(data$Discount)
 summary(data$Profit)
 ```
-```{r fig.cap="Plot of transactions involving discounts. Sales transactions mostly do not involve discounts."}
+```{r warning=FALSE, message=FALSE, fig.cap="Plot of transactions involving discounts. Sales transactions mostly do not involve discounts."}
 ggplot(data = data) +
   geom_histogram(mapping = aes(x = Discount), 
                  binwidth = 0.05,
@@ -147,7 +149,7 @@ ggplot(data = data) +
                  fill="green4")
 ```
 
-```{r fig.cap= "Profit distribution from transactions"}
+```{r warning=FALSE, message=FALSE, fig.cap= "Profit distribution from transactions"}
 ggplot(data)+
 geom_histogram(mapping=aes(x=Profit),fill="green3")+
 coord_cartesian(ylim = c(0, 100))+
@@ -185,6 +187,9 @@ ggplot(data = data) +
 ```{r}
 table(data$`Sub_Category`)
 ```
+The most frequently ordered items are Binders and paper, followed by Furnishings and Phones. The least ordered items are Copiers.
+
+
 look at the time range for these transactions, ie. start date for Order_Date column:
 
 ```{r}
@@ -253,7 +258,10 @@ ggplot(data) +
 geom_point(mapping = aes(x = Sales, y = Profit),colour="limegreen")+
 labs(title=" Sales Profit Distribution")
 ```
-```{r}
+Generally, Profits can either go down or go up as Sales increases. Also, the higher the Sales are, the higher the absolute value of Profits are, yet sometimes the Profits can be significantly negative.
+
+
+``{r}
 #product name and product id mismatch
 data %>% 
   distinct(Product_Name,Product_ID) %>% 
@@ -330,7 +338,7 @@ ggplot(data = data) +
   ylab("Sales")
 
 ```
-
+The West region has the highest Sales among the four regions, followed by the East region. The South region has the lowest Sales.
 
 ```{r echo=FALSE, fig.cap= "Total profit by region"}
 ggplot(data = data) + 
@@ -338,7 +346,7 @@ ggplot(data = data) +
   ggtitle("Total Profit by region")+
   ylab("Profit")
 ```
-
+The West region has the highest Profits among the four regions, followed by the East region. The South region has the lowest Sales. The pattern between Profits and Regions is the same as it is between Sales and Regions.
 
 Look at relationship between numeric variables: 
 
@@ -353,30 +361,29 @@ We'll use a correlation matrix to look at the relationship between numeric varia
 ```{r fig.cap= "Correlation matrix of numeric variables"}
 cor(num_data)
 ```
-```{r, }
-#correlation matrix with statistical significance
+```{r, fig.cap= "correlation matrix with statistical significance"}
+
 cor_result=rcorr(as.matrix(num_data))
 
-cor_result$r
+cor_result$P
 corrplot(cor_result$r, type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)  #display only upper triangle of correlation matrix
 
 ```
 
-Discount is negatively correlated with profit, whereas sales is positively correlated with profit. The time between order date and
-ship date (diff_in_days) is not correlated with sales, quantity, discount, or profit.
+From the significance testing, we can see that Quantity and Sales are significantly correlated, as well as Discount and Sales, Profit and Sales, Quantity and Profit, Discount and Profit and days taken to ship and Profit. 
 
 
 ## Data Preparation
 
 
-```{r}
+```{r, echo=FALSE}
 #make a copy of the original dataset and copy to data1
 data1 <- data
 ```
 
-drop column Row ID because it is not necessary; it is the row number from the original excel file. The country variable is also not needed because all the values are United States. 
+Drop column Row ID because it is not necessary; it is the row number from the original excel file. The country variable is also not needed because all the values are United States. 
 Customer_Name and Customer_ID give redundant information. So we will drop the Customer_Name column and keep only the Customer_ID column.
-```{r}
+```{r, echo=FALSE}
 data1[,c("Row_ID","ï__Row_ID", "Country", "Customer_Name")]<-NULL
 ```
 
@@ -413,7 +420,6 @@ summary(results_kmeans)
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 #results_kmeans  #this is commented out to prevent long print out
 
-# https://towardsdatascience.com/clustering-analysis-in-r-using-k-means-73eca4fb7967
 
 #cluster means are the centroid vectors
 #clustering vector is the group that the observation is placed into
@@ -624,7 +630,7 @@ From the silhouette width plot, it looks like cluster 4 is well clustered since 
 LOF uses density based methods to calculate degree of outlying. LOF is a unsupervised anomaly detection technique, every point in the dataset is assigned LOF score based on the threshold value it classify the data points as outlier or non-outlier.
 
 The lofactor method calculates local outlier factors , where k is the number of neighbors used in the calculation of the local outlier factors.
-For the minimum value of K, the LOF values fluctuate wildy the points in a uniform distribution for k<10, with points in a uniform distribution sometimes showing up as outliers, so recommended value of k is min 10.The minimum k-value serves as a minimum size for something to be considered a "cluster", so points outside can be outliers relative to that cluster. 
+For the minimum value of K, the LOF values fluctuate wildly the points in a uniform distribution for k<10, with points in a uniform distribution sometimes showing up as outliers, so the recommended value of k is minimum 10. The minimum k-value serves as a minimum size for something to be considered a "cluster", so points outside can be outliers relative to that cluster. 
 
  
 ```{r}
@@ -634,11 +640,15 @@ superstore_unq<-data1[!duplicated(data1[c("Sales","Profit","Quantity","Discount"
 
 #select numerical variables
 superstore_lof<-superstore_unq[,c("Sales","Profit","Quantity","Discount")]
+```
 
-# for k=10, ,lof produces a vector of local outlier factor for each data point
+```{r, fig.cap="Density plot of local outlier factor scores"}
+# for k=10, lof produces a vector of local outlier factor for each data point
 lof_scores <- lofactor(superstore_lof, k=10)
 plot(density(lof_scores))
- 
+```
+
+```{r, fig.cap="Histogram of LOF scores"} 
 # distribution of outlier factors
 hist(lof_scores, breaks=10)
 
@@ -746,7 +756,7 @@ superstore_dbc<-scale(superstore_dbc)
 ```
 
 Two important parameters are required for DBSCAN are eps and MinPts.The parameter eps defines the radius of neighborhood around a data point.
-The parameter MinPts is the minimum number of neighbors within eps radius.For a dataset, with a neighbor count greater than or equal to MinPts, is marked as a core point. Data point is border point, if the number of its neighbors is less than MinPts, but it belongs to the eps of some core point z.If a point is neither a core nor a border point, then it is called a noise point or an outlier.
+The parameter MinPts is the minimum number of neighbors within eps radius. For a dataset, with a neighbor count greater than or equal to MinPts, it is marked as a core point. Data point is border point, if the number of its neighbors is less than MinPts, but it belongs to the eps of some core point z. If a point is neither a core nor a border point, then it is called a noise point or an outlier.
 To determine the optimal value of eps ,kNNdistplot() is used to draw the k-distance plot where knee corresponds to optimal parameter of eps.The method uses k-nearest neighbor distances to calculate the average of the distances of every point to its k nearest neighbors.
 The value of K is 3 and corresponds to MinPts.
 
@@ -757,7 +767,7 @@ abline(h = 0.15, lty = 2)
 ```
 The optimal value of eps is 2 from K-distance plot.The dbscan method uses eps=2 and MinPts =3.
 
-```{r}
+```{r, fig.cap= "Cluster plot of DBScan"}
 # cluster assignments with dbscan
 dbc<-fpc::dbscan(superstore_dbc,eps=2, MinPts  = 3)
 fviz_cluster(dbc, superstore_dbc,  geom = "point")
@@ -803,7 +813,7 @@ rownames(normal_transactions_scaled) <- normal_transactions_numeric$name     #re
 ```
 
 Use PCA to scale the dimensions of the data:
-```{r}
+```{r, fig.cap= "Scree plot of PCA transformed normal transactions"}
 res.pca <- PCA(normal_transactions_scaled, graph = FALSE)
 
 #Visualize eigenvalues/variances
@@ -816,17 +826,17 @@ Extract the results for variables
 var <- get_pca_var(res.pca)
 ```
 
-Contributions of variables to PC1
-```{r}
+
+```{r, fig.cap = "Contributions of variables to PC1"}
 fviz_contrib(res.pca, choice = "var", axis = 1, top = 10)
 ```
-Contributions of variables to PC2
-```{r}
+
+```{r, fig.cap = "Contributions of variables to PC2"}
 fviz_contrib(res.pca, choice = "var", axes = 2, top = 10)
 ```
 
 #Control variable colours using their contributions to the principal axis
-```{r}
+```{r, fig.cap="Visualisation of variables with PCA"}
 fviz_pca_var(res.pca, col.var = "contrib",
              gradient.cols =c("#00AFBB", "#E7B800", "#FC4E07"),
              repel = TRUE #prevent text overlapping
@@ -843,7 +853,7 @@ Discount is inversely related to sales, profit and quantity.
 Using the Elbow method to determine the optimal number of clusters involves plotting the within cluster sum of squares. The optimal number of clusters is the one located at the "bend" on the graph, where WSS is lowered. Within-cluster sum of squares (WCSS) is the degree to which items within a cluster are similar or dissimilar (Nwanganga and Chapple, 2020).
 
 The closer the items within a cluster are to the centroid, the lower the value of WCSS. 
-```{r}
+```{r, warning=FALSE, message=FALSE, fig.cap="Elbow method to determine optimal clusters in Kmeans"}
 set.seed(123)
 
 #to compute the total within-cluster sum of squares:
@@ -855,7 +865,7 @@ The optimal number of clusters looks to be k = 4 (the elbow point). K=4 is where
 ### Silhouette Method 
 
 Another method is to look at the silhouette method. The silhouette of an observation is a value that represents how closely the item is matched with other items with the the same cluster and how loosely matched it is with observations in a different cluster. 
-```{r}
+```{r, warning=FALSE, message=FALSE, fig.cap="Silhouette Plot to determine optimal k value in K-means"}
 fviz_nbclust(normal_transactions_scaled, kmeans, method = "silhouette", k.max = 24) + theme_minimal() + ggtitle("The Silhouette Plot")
 ```
 The silhouette method suggests the optimal number of clusters is 2, since k=2 corresponds to the highest average silhouette width value. 
@@ -893,7 +903,7 @@ results_kmeans <- kmeans(normal_transactions_scaled, centers = 3, nstart =25)
 #results_kmeans$cluster
 ```
 
-```{r}
+```{r, fig.cap="Cluster plot for K-means of Superstore normal transactions, k=3"}
 library(RColorBrewer)
 fviz_cluster(results_kmeans, data = normal_transactions_scaled,
              palette = brewer.pal(n = 8, name = "Dark2"), 
@@ -960,7 +970,7 @@ The within sum of squares by cluster is 56.7%.
 
 
 Plotting the 4 kmeans clustering results
-```{r}
+```{r, fig.cap="Cluster plot for K-means of Superstore normal transactions, k=4"}
 library(RColorBrewer)
 fviz_cluster(results_kmeans_4, data = normal_transactions_scaled,
              palette = brewer.pal(n = 8, name = "Dark2"), 
@@ -1025,7 +1035,7 @@ data2[which(gower_mat == max(gower_mat[gower_mat != max(gower_mat)]), arr.ind = 
 
 Try to figure out the number of clusters to use by using the silhouette coefficient. Typically the number of clusters used is between 2 and 8. 
 
-```{r}
+```{r, fig.cap="Silhouette Width plot for optimal number of clusters in K-medoids of Superstore data"}
 sil_width <- c(NA)
 for (i in 2:8){
   pam_fit <- pam(gower_dist, diss = TRUE, k = i )
@@ -1101,7 +1111,7 @@ data2[pam_fit_4$medoids, ]
 ```
 
 Plotting the k-medoids with k=4. This method applies t-distributed stochastic neighborhood embedding (t-SNE) which enables visualization of several variables in a lower dimensional space.
-```{r, fig.height=8, fig.width=6}
+```{r, fig.height=8, fig.width=6, fig.cap="t-SNE visualization of K-medoids clustering using PAM, k=4"}
 tsne_obj <- Rtsne(gower_dist, is_distance = TRUE)
 
 tsne_data <- tsne_obj$Y %>%
@@ -1174,7 +1184,7 @@ pam_results_3$the_summary
 ```
 
 ## Visualise the clusters using T-SNE
-```{r, fig.height=8, fig.width=6}
+```{r, fig.height=8, fig.width=6, fig.cap="t-SNE visualization of K-medoids clustering in 2 dimensions"}
 tsne_obj <- Rtsne(gower_dist_3, is_distance = TRUE)
 
 tsne_data <- tsne_obj$Y %>%
@@ -1226,8 +1236,10 @@ Plotting the clusters found using Factor Analysis of Mixed Data (FAMD).
 ```
 
 
-## Deployment
-The clustering model and anomaly detection app are deployed in shiny app. The interactive applications accepts inputs from the user and display accordingly. The url for application is below  
+### Deployment 
+The clustering model and anomaly detection apps are deployed in shiny app. The “Let's cluster for mixed data!” Shiny app is designed to perform clustering analysis on data set that contains both numeric and categorical variables. It uses a random sample from the USA Superstore data to perform sample clustering and displays sample results. The backend clustering method used is Partitioning Around Medoids (PAM) with Gower’s distance metric. Users can upload a dataset that they want to investigate clusters on to the application using the “Browse” button. The application offers two options to visualize the clustering results. The first shows a scatterplot of any two variables selected from the dataset, and each data point is colored by its cluster, which enables users to visualize the distributions of the two selected variables in each cluster, so that the users can take more effective actions on their targeted groups. The second visualization is a plot of clusters on reduced dimensions, which has to perform on mixed data. By observing the second plot, users can have a sense of whether the clusters are distinct (effective) enough. If the clusters overlap each other severely, other measures of manipulating the data or reconsidering the business program may need to be considered. The application can be used either as a tool to explore the US Superstore data set, or as a generic tool to perform clustering analysis on any small to medium sized mixed data set of the user’s interest.
+
+The url for application is below  
 [Clustering - https://crystalzhu72.shinyapps.io/MixedDataClustering/]( https://crystalzhu72.shinyapps.io/MixedDataClustering/)
 
 [Anomaly Detection - https://mlgroupb.shinyapps.io/anomaly/](https://mlgroupb.shinyapps.io/anomaly/)
@@ -1251,18 +1263,24 @@ The Superstore can now use the commonalities for customers within these clusters
 
 When evaluating the clustering using the t-SNE method to examine the clusters in 2 dimensions, we can see that there is still some overlap between the different clusters. We also evaluated the clustering by examining the silhouette width, by choosing the optimal number of clusters with maximal silhouette width. In our case, the optimal number of clusters of k=4 produced a silhouette width of 0.08368581. 
 
+Unsupervised outlier detection algorithms were used to identify global and local outliers. Using LOF method, points that have a substantially lower density than their neighbors are considered outliers. An LOF score gives density around the point, scores significantly larger than 1 indicate local outliers. We considered lof score greater than 2 as outliers and 22 outliers were identified and labelled as outliers. In outForest method, a numerical variable is regressed onto all other variables using a random forest method. If the scaled absolute difference between observed value and out-of-bag prediction is large, then a value is considered an outlier. We were able to identify a total of 556 outliers using outForest method. Density-Based Spatial Clustering and Application with Noise (DBSCAN) method is known for handling noisy data and finding different shape of clusters. Using DBSCAN, we were able to cluster the data into three clusters and set of outliers. There were 34 outliers detected using DBSCAN method. All three methods had significant number of common outliers.
+
 ### Ways to Improve Clustering Results in Future
 
 #### For Kmeans clustering which uses Euclidean distance:
-To improve the clustering results we may have to perform some feature engineering to reduce observations which have values of 0.5 in the similarity matrix. Similarity is distance based, where similarity measures have value in [0, 1] where 0 is no similarity and 1 is identical. TO reduce the noise due to observations having values of 0.5 on the similarity matrix, we can use the loss metric to get the 0.5 similarity values closer to either 0 or 1 (Sinclair, 2018). 
+To improve the clustering results we may have to perform some feature engineering to reduce observations which have values of 0.5 in the similarity matrix. Similarity is distance based, where similarity measures have value in [0, 1] where 0 is no similarity and 1 is identical. To reduce the noise due to observations having values of 0.5 on the similarity matrix, we can use the loss metric to get the 0.5 similarity values closer to either 0 or 1 (Sinclair, 2018). 
 
 The equation for the loss metric is below: 
+
+
 ![Image caption Source:https://towardsdatascience.com/improving-clustering-performance-using-feature-weight-learning-d65d4fec77cb](images/loss_metric.png)
 
 where 1 = base weights, p = resulting fuzzy partition matrix which is a product of the weights used in the euclidean distance function between points p and q. 
 
 Afterwards, perform Gradient Descent on the loss function to get the local minimum of the function, and continuously update the weights until the maximum number of iterations are met or the function converges (Sinclair, 2018). By improving the feature weights, clusters will be easier to identify.
 
+#### For K-Medoids
+If the clustering plots overlap significantly, or if the clusters are not meaningful enough for business actions, measures of improving the clustering results might be needed. Since K-medoids is sensitive to the choices of initial medoids, a better quality of initial medoids could help improve the clustering results. Another way of improving clustering methods is to wisely select the variables used for performing clustering, generally independent variables work better at clustering than heavily correlated variables. Since PAM is very computationally intensive, if your data set is too large for PAM, considering changing clustering methods is a good option, such as using CLARA (Clustering For Large Applications) or CLARANS (Clustering Large Applications based upon RANdomized Search). 
 
 
 
@@ -1271,9 +1289,13 @@ Afterwards, perform Gradient Descent on the loss function to get the local minim
 
 ## References
 
+
 (2017).Exploring Assumptions of K-means Clustering using R. Retrieved from  https://www.r-bloggers.com/2017/08/exploring-assumptions-of-k-means-clustering-using-r/
 
 Alboukadel .K-Means Clustering Visualization in R: Step By Step Guide. Retrieved from: https://www.datanovia.com/en/blog/k-means-clustering-visualization-in-r-step-by-step-guide/
+
+Sievert, C., and Cheng, J. Create a Bootstrap theme. RStudio.  
+https://rstudio.github.io/bslib/reference/bs_theme.html
 
 Li, C.C., Detecting Outlier by Local Outlier Factor and Random Forest. Retrieved from: https://rstudio-pubs-static.s3.amazonaws.com/216270_ccd62999b6504c22a390bb39fee22f39.html
 
@@ -1287,7 +1309,7 @@ Fonseca, L. (2019). Clustering Analysis in R using K-means. Retrieved from:  htt
 
 Gama, K-Medoids in R: Algorithm and Practical Examples. Retrieved from:https://www.datanovia.com/en/lessons/k-medoids-in-r-algorithm-and-practical-examples/
 
-Kassambara, Riad, & Visitor, FAMD - Factor Analysis of Mixed Data in R: Essentials. Retrieved from:http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/115-famd-factor-analysis-of-mixed-data-in-r-essentials/#comments-list (Kassambara, 2017)
+Kassambara, Riad, & Visitor, (2017). FAMD - Factor Analysis of Mixed Data in R: Essentials. Retrieved from:http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/115-famd-factor-analysis-of-mixed-data-in-r-essentials/#comments-list  
 
 K-means clustering with tidy data principles. Retrieved from: https://www.tidymodels.org/learn/statistics/k-means/
 
@@ -1298,4 +1320,7 @@ Mayer, M. (2021). Using OutForest. Retrieved from: https://cran.r-project.org/we
 Nwanganga, F. and Chapple, M. (2020). Practical Machine Learning in R. Indianapolis, Indiana: Wiley & Sons.-
 
 Sinclair, C. (2018). Improving Clustering Performance Using Feature Weight Learning. Retrieved from https://towardsdatascience.com/improving-clustering-performance-using-feature-weight-learning-d65d4fec77cb
+
+
+WorldCIST (2017). Improving the Efficiency of the K-medoids Clustering Algorithm by Getting Initial Medoids. Recent Advances in Information Systems and Technologies pp 125-132
 
