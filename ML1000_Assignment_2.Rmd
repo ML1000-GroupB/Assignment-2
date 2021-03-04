@@ -12,6 +12,7 @@ output:
 
 Anomaly detection or Outlier detection identifies data points, events or observations that deviate from dataset's normal behavior. Anomalous data indicate critical incidents or potential opportunities. In order to take advantage of opportunities or fix costly problems anomaly detection has to be done in real time. Unsupervised machine learning models can be used to automate anomaly detection. Unsupervised anomaly detection algorithms scores data based on intrinsic properties of the dataset. Distances and densities are used to give an estimation what is normal and what is an outlier. Anomaly detection monitor is a tool developed for an online retailer to check product quality issues like profit opportunities and sales glitches. The application is built using R and Shinyapp following CRISP-DM framework. 
 
+The goal of cluster analysis in marketing is to accurately segment customers in order to achieve more effective customer marketing via personalization. A common cluster analysis method is a mathematical algorithm known as k-means cluster analysis, sometimes referred to as scientific segmentation. The clusters that result assist in better customer modeling and predictive analytics, and are also used to target customers with offers and incentives personalized to their wants, needs and preferences.
 
 ## Business Case
 
@@ -112,47 +113,12 @@ There are no missing values in the dataset.
 
 Get a general idea of the data set.  
 
-```{r}
-length(unique(data$Customer.ID))
-#793 unique customer IDs
-length(unique(data$Customer.Name))
-#793 unique customer names - We can drop one of these two variables since they are redundant.
-
-length(unique(data$Segment))
-unique(data$Segment)
-#"Consumer"    "Corporate"   "Home Office"
-
-unique(data$Country)
-#all are from US - could drop this variable due to no-variation introduced by it
-
-length(unique(data$City))
-#531 different cities
-
-length(unique(data$State))
-#49 states
-
-length(unique(data$Postal.Code))
-#631 postal code - 793 unique customer IDs - some customers live very close!
-
-unique(data$Region)
-#only 4 regions
-
-unique(data$Sub.Category)
-#17 sub-categories 
-
-length(unique(data$Product.Name))
-#1850 product names
-length(unique(data$Product.ID))
-#1862 product IDs - potential redundant variables!
-```
-
-
 ```{r, fig.cap = "Clockwise from top left: a)Histogram of time difference between order date and ship date. The time difference between order date and ship date typically takes 4 days. b) Boxplot of sales showing many outliers. c) Histogram of sales values showing a large amount of orders with very small Sales!, d) Boxplot of quantity values. Many transactions involve very few items, with median value of 3 items"}
 par(mfrow=c(2,2))
 hist(data$diff_in_days)
-boxplot(data$Sales)
+boxplot(data$Sales, main="Sales Boxplot", xlab="Sales")
 hist(data$Sales)
-boxplot(data$Quantity)
+boxplot(data$Quantity, main="Quantity Boxplot", xlab="Quantity")
 ```
 ```{r }
 summary(data$Sales)
@@ -167,9 +133,9 @@ summary(data$Quantity)
 ```
 
 ```{r fig.cap= "From top: a) Boxplot of discount values. A strange looking box dataplot - median & 3rd quantile are the same (0.2) and not many orders have high discounts. b)Boxplot of profit. Most of the profits are outside of the box - but most of them clustered close to the box(not with so extreme values "}
-par(mfrow=c(2,1))
-boxplot(data$Discount)
-boxplot(data$Profit)
+par(mfrow=c(1,2))
+boxplot(data$Discount, main="Discount")
+boxplot(data$Profit, main="Profit")
 summary(data$Discount)
 summary(data$Profit)
 ```
@@ -387,7 +353,7 @@ We'll use a correlation matrix to look at the relationship between numeric varia
 ```{r fig.cap= "Correlation matrix of numeric variables"}
 cor(num_data)
 ```
-```{r}
+```{r, }
 #correlation matrix with statistical significance
 cor_result=rcorr(as.matrix(num_data))
 
@@ -653,13 +619,13 @@ From the silhouette width plot, it looks like cluster 4 is well clustered since 
 
 ## Anomaly Detection Method 1 - using Local Outlier Factor Algorithm  -Nearest neighbour method 
 
+
+
 LOF uses density based methods to calculate degree of outlying. LOF is a unsupervised anomaly detection technique, every point in the dataset is assigned LOF score based on the threshold value it classify the data points as outlier or non-outlier.
 
-Points which are much lower in density compared to its neighbours are considered outliers. 
+The lofactor method calculates local outlier factors , where k is the number of neighbors used in the calculation of the local outlier factors.
+For the minimum value of K, the LOF values fluctuate wildy the points in a uniform distribution for k<10, with points in a uniform distribution sometimes showing up as outliers, so recommended value of k is min 10.The minimum k-value serves as a minimum size for something to be considered a "cluster", so points outside can be outliers relative to that cluster. 
 
-A LOF score of approximately 1 indicates that density around the point is comparable to its neighbors. Scores significantly larger than 1 indicate outliers (Hahsler).
-
-If there are more than k duplicate points in the data, then lof can become NaN caused by an infinite local density. In this case we set lof to 1
  
 ```{r}
 
@@ -674,10 +640,13 @@ lof_scores <- lofactor(superstore_lof, k=10)
 plot(density(lof_scores))
  
 # distribution of outlier factors
-summary(lof_scores)
 hist(lof_scores, breaks=10)
 
 ```
+
+
+LOF compares the local density of an point to the local densities of its neighbors.
+Points that have a substantially lower density than their neighbors are considered outliers. A LOF score of approximately 1 indicates that density around the point is comparable to its neighbors. Scores significantly larger than 1 indicate outliers.In this case we chose lof score greater than 2 as ouliers. The outliers are labelled in the dataset accordingly
 
 
 ### Manual Evaluation of Local Outlier Factor
@@ -698,9 +667,6 @@ vec<-as.vector(outlier_orderid)
 
 #new column for outlier status
 superstore_unq<-mutate(superstore_unq,outlier_status=ifelse(Order_ID %in% (vec) ,"Yes","No"))
-
-x<-subset(superstore_unq,superstore_unq$outlier_status=="Yes")
-head(x, 10)          #look at top 10 rows of x
 
 ```
 
@@ -754,21 +720,16 @@ Observed same set of top outliers as LOF algorithm.
 #outlier rows, observed values, predicted and RMSE
 y<-outliers(outforest_outlier)
 row_out<-y$row
-superstore_unq<-mutate(superstore_unq,outlier_outstatus=ifelse(row.names(superstore_unq) %in%row_out ,"Yes","No"))
 
-head(outliers(outforest_outlier),21)
+#label the dataset for outliers
+superstore_unq<-mutate(superstore_unq,outlier_outstatus=ifelse(row.names(superstore_unq) %in%row_out ,"Yes","No"))
 ```
 
 
-```{r}
+```{r fig.cap="Number of Outliers per variable for Outforest"}
 # Outliers per variable
 plot(outforest_outlier)
 
-```
-
-```{r}
-# Basic plot of the scores of the outliers per variable
-plot(outforest_outlier,what="scores")
 ```
 
 
@@ -776,29 +737,36 @@ plot(outforest_outlier,what="scores")
 
 DBSCAN is  density-based clustering algorithm, which can be used to identify clusters of any shape in data set containing noise and outliers. DBSCAN stands for Density-Based Spatial Clustering and Application with Noise. DBSCAN does not require the user to specify the number of clusters to be generated and can identify outliers.
 
+
 ```{r}
-#dataset for dbscan, using sales and profit
+#dataset for dbscan 
 superstore_dbc<-superstore_unq[,c("Sales","Profit","Quantity","Discount","orderday","shipday")]
 superstore_dbc<-scale(superstore_dbc)
 
 ```
-K-distance plot -find  maximum reachability distance (eps)
 
-```{r}
+Two important parameters are required for DBSCAN are eps and MinPts.The parameter eps defines the radius of neighborhood around a data point.
+The parameter MinPts is the minimum number of neighbors within eps radius.For a dataset, with a neighbor count greater than or equal to MinPts, is marked as a core point. Data point is border point, if the number of its neighbors is less than MinPts, but it belongs to the eps of some core point z.If a point is neither a core nor a border point, then it is called a noise point or an outlier.
+To determine the optimal value of eps ,kNNdistplot() is used to draw the k-distance plot where knee corresponds to optimal parameter of eps.The method uses k-nearest neighbor distances to calculate the average of the distances of every point to its k nearest neighbors.
+The value of K is 3 and corresponds to MinPts.
+
+```{r fig.cap="K distance plot"}
 #find value of eps
 dbscan::kNNdistplot(superstore_dbc, k = 3)
 abline(h = 0.15, lty = 2)
 ```
+The optimal value of eps is 2 from K-distance plot.The dbscan method uses eps=2 and MinPts =3.
 
 ```{r}
 # cluster assignments with dbscan
-dbc<-fpc::dbscan(superstore_dbc,eps=1.5, MinPts  = 10)
+dbc<-fpc::dbscan(superstore_dbc,eps=2, MinPts  = 3)
 fviz_cluster(dbc, superstore_dbc,  geom = "point")
 
 #hullplot(superstore_dbc, dbc$cluster)
 
 ```
-The black points are outliers .
+The result of dbscan results in three clusters (1,2,3) and outliers. Border points from print(dbc) corresponds to outliers, in this case is 34.
+The outliers are labelled in the dataset accordingly. The black points are outliers .
 
 ```{r}
 print(dbc)
@@ -1006,8 +974,6 @@ fviz_cluster(results_kmeans_4, data = normal_transactions_scaled,
 
 # Method 2: Clustering with K-medoids
 
-
-Following this tutorial: https://towardsdatascience.com/clustering-on-mixed-type-data-8bbd0a2569c3
 
 K-means algorithm is limited in that it can only work with numerical data, whereas our dataset contains both numeric and categorical data. 
 
